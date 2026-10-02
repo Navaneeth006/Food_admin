@@ -11,6 +11,8 @@ on:
 jobs:
   build-debug-apk:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
@@ -29,6 +31,15 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
       - name: Install Node dependencies
         working-directory: app_kiosk
         run: npm ci
@@ -39,6 +50,9 @@ jobs:
 
       - name: Build debug APK
         working-directory: app_kiosk/android
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug
