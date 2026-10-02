@@ -1,37 +1,39 @@
 # App Kiosk
 
-This folder is the phone-hosted kiosk setup you described:
+The Android app hosts the kiosk on the phone. It includes a foreground HTTP service, an in-app server control screen, customer kiosk and admin pages, and an API for menu/orders.
 
-- Phone runs the backend server
-- iPad connects to that server and opens the customer kiosk UI
-- Phone also opens the admin panel
-- The kiosk and admin pages are separate frontend screens served by the same backend
+## Install the Android app
 
-## Architecture
+Download the `app-kiosk-debug-apk` artifact from the successful GitHub Actions run, extract the ZIP, and install `app-debug.apk` on the phone. On first launch, allow notifications so Android can show the ongoing server notification.
 
-Phone (host):
-- Node.js server
-- SQLite or in-memory data store
-- admin dashboard
-- public kiosk page for the iPad
+## Start the phone server
 
-iPad (client):
-- loads the kiosk front-end from the phone
-- creates orders
-- shows payment flow
-- prints to Bluetooth/USB receipt device if supported
+1. Open **Food Kiosk** on the phone.
+2. Turn **Phone server** on. It starts on port `4242` and shows an ongoing notification while active.
+3. Connect the iPad to the same Wi-Fi network as the phone.
+4. Open the **iPad URL** shown in the app on the iPad. It looks like `http://PHONE-IP:4242/kiosk.html`.
+5. Use **Open admin** on the phone to open the admin page. The demo PIN is `1234`.
 
-## Run locally
+The notification has a **Stop server** action. Turning the server off in the app or notification also disables automatic restart.
+
+## Background and restart behavior
+
+- The server runs as an Android foreground service, so it can continue when the app screen is closed or the display is off.
+- If Android kills the service, it requests a restart. If the phone reboots, the server starts again when it was previously enabled and Android permits background startup.
+- For more reliable background operation, open Android Settings → Apps → Food Kiosk → Battery and select **Unrestricted** (wording varies by phone manufacturer).
+- A powered-off phone cannot host a server. The server can only resume after the phone is powered on and Android completes startup.
+- Android force-stop, disabling the app, or some manufacturer battery controls can prevent automatic restart until the app is opened again.
+- The phone and iPad must be on the same reachable Wi-Fi network. Guest Wi-Fi/client isolation can block connections.
+
+## Local Node.js development
 
 ```bash
 npm install
 npm start
 ```
 
-Then:
-- Phone admin: http://localhost:4242/admin.html
-- iPad kiosk: http://<phone-ip>:4242/
+Then open `http://localhost:4242/` on the computer, or use the computer's LAN IP from another device.
 
-## Important note
+## Current scope
 
-This is for a local network setup. It is not a standalone offline app. It is for a phone-hosted server + iPad client architecture.
+Orders created by the Android-hosted service are stored on that phone and survive app restarts. The sample menu and admin PIN are demo values. The **Place order** button records an order; a payment provider and Bluetooth receipt printing are not integrated yet.

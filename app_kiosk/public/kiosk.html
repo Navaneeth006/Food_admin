@@ -23,13 +23,14 @@
         <span id="status">Online</span>
       </div>
 
+      <p id="connection-message" role="status">Loading menu...</p>
       <div id="menu" class="menu"></div>
 
       <div class="cart">
         <h2>Cart</h2>
         <div id="cart-items"></div>
         <div class="cart-item"><strong>Total</strong> <strong id="total">₹0</strong></div>
-        <button class="pay-btn" onclick="placeOrder()">Pay Now</button>
+        <button class="pay-btn" onclick="placeOrder()">Place order</button>
       </div>
     </div>
 
@@ -40,10 +41,20 @@
       };
 
       async function loadMenu() {
-        const res = await fetch('/api/menu');
-        const data = await res.json();
-        state.menu = data.menu;
-        renderMenu();
+        const message = document.getElementById('connection-message');
+        try {
+          const res = await fetch('/api/menu');
+          if (!res.ok) throw new Error('The phone server returned an error.');
+          const data = await res.json();
+          if (!Array.isArray(data.menu) || data.menu.length === 0) throw new Error('No menu items are available.');
+          state.menu = data.menu;
+          message.textContent = '';
+          document.getElementById('status').textContent = 'Online';
+          renderMenu();
+        } catch (error) {
+          message.textContent = error.message + ' Check that the phone server is on and both devices use the same Wi-Fi.';
+          document.getElementById('status').textContent = 'Offline';
+        }
       }
 
       function renderMenu() {
@@ -84,16 +95,20 @@
       async function placeOrder() {
         if (!state.cart.length) return alert('Cart is empty');
 
-        const res = await fetch('/api/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cart: state.cart, customerName: 'iPad Customer' })
-        });
-
-        const data = await res.json();
-        alert(`Order placed successfully: #${data.order.id}`);
-        state.cart = [];
-        renderCart();
+        try {
+          const res = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cart: state.cart, customerName: 'iPad Customer' })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Order could not be placed.');
+          alert(`Order placed successfully: #${data.order.id}`);
+          state.cart = [];
+          renderCart();
+        } catch (error) {
+          alert(error.message + ' Check the phone server and try again.');
+        }
       }
 
       loadMenu();

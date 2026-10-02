@@ -3,100 +3,147 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Kiosk</title>
+    <meta name="theme-color" content="#111827" />
+    <title>Food Kiosk Server</title>
     <style>
-      body { font-family: Arial, sans-serif; margin: 0; background: #111827; color: white; }
-      .container { max-width: 900px; margin: 0 auto; padding: 24px; }
-      .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-      .menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
-      .item { background: #1f2937; padding: 16px; border-radius: 12px; }
-      .item button { width: 100%; background: #f59e0b; border: none; border-radius: 8px; padding: 10px; font-weight: 700; }
-      .cart { background: #1f2937; border-radius: 12px; padding: 16px; margin-top: 20px; }
-      .cart-item { display: flex; justify-content: space-between; margin-bottom: 12px; }
-      .pay-btn { margin-top: 16px; width: 100%; background: #10b981; color: white; border: none; border-radius: 8px; padding: 12px; font-size: 18px; }
+      :root { color-scheme: dark; font-family: "Trebuchet MS", sans-serif; background: #111827; color: #f8fafc; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; background: linear-gradient(155deg, #182637, #111827 55%, #101d1b); }
+      main { width: min(760px, 100%); margin: 0 auto; padding: 28px 20px 48px; }
+      header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 10px 0 34px; }
+      h1 { margin: 0; font-size: 30px; }
+      h2 { margin: 0 0 6px; font-size: 21px; }
+      p { line-height: 1.5; }
+      .status { display: flex; align-items: center; gap: 9px; color: #cbd5e1; }
+      .dot { width: 10px; height: 10px; border-radius: 50%; background: #64748b; }
+      .dot.on { background: #2dd4a3; box-shadow: 0 0 14px #2dd4a377; }
+      .panel { padding: 22px; margin-top: 16px; border: 1px solid #354255; border-radius: 8px; background: #1f2937; }
+      .muted { margin: 0; color: #aab7c8; }
+      .switch { width: 100%; min-height: 54px; margin-top: 20px; border: 0; border-radius: 6px; background: #10b981; color: #062b25; font: inherit; font-size: 18px; font-weight: 700; }
+      .switch.off { background: #e0715e; color: #fff; }
+      .switch:disabled { opacity: .65; }
+      .urls { display: grid; gap: 12px; margin-top: 18px; }
+      .url-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; padding: 12px; border: 1px solid #3c4a5d; border-radius: 6px; }
+      .url-row a { overflow-wrap: anywhere; color: #7dd3fc; }
+      .url-row button { padding: 8px 10px; border: 1px solid #69778a; border-radius: 5px; background: #263445; color: #fff; }
+      .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+      .actions a { flex: 1 1 180px; padding: 13px; border-radius: 5px; background: #10b981; color: #071d18; font-weight: 700; text-align: center; text-decoration: none; }
+      .actions a.secondary { background: #f3b54a; color: #241706; }
+      #message { min-height: 24px; margin: 12px 0 0; color: #fbbf24; }
+      @media (max-width: 420px) { main { padding: 22px 14px 36px; } header { align-items: flex-start; flex-direction: column; margin-bottom: 24px; } .panel { padding: 18px; } }
     </style>
   </head>
   <body>
-    <div class="container">
-      <div class="header">
+    <main>
+      <header>
         <h1>Food Kiosk</h1>
-        <span id="status">Online</span>
-      </div>
+        <div class="status" aria-live="polite"><span id="statusDot" class="dot"></span><span id="statusText">Checking server</span></div>
+      </header>
 
-      <div id="menu" class="menu"></div>
+      <section class="panel" aria-labelledby="serverTitle">
+        <h2 id="serverTitle">Phone server</h2>
+        <p id="serverDetail" class="muted">Starting the local kiosk service...</p>
+        <button id="serverToggle" class="switch" type="button" disabled>Checking...</button>
+        <p id="message" role="status"></p>
+      </section>
 
-      <div class="cart">
-        <h2>Cart</h2>
-        <div id="cart-items"></div>
-        <div class="cart-item"><strong>Total</strong> <strong id="total">₹0</strong></div>
-        <button class="pay-btn" onclick="placeOrder()">Pay Now</button>
-      </div>
-    </div>
+      <section class="panel" aria-labelledby="linksTitle">
+        <h2 id="linksTitle">Connect devices</h2>
+        <p class="muted">Connect the iPad and this phone to the same Wi-Fi network.</p>
+        <div class="urls">
+          <div class="url-row"><a id="kioskUrl" href="#">Waiting for server</a><button type="button" data-copy="kioskUrl">Copy</button></div>
+          <div class="url-row"><a id="adminUrl" href="#">Waiting for server</a><button type="button" data-copy="adminUrl">Copy</button></div>
+        </div>
+        <div class="actions">
+          <a id="openKiosk" href="#">Open kiosk</a>
+          <a id="openAdmin" class="secondary" href="#">Open admin</a>
+        </div>
+      </section>
+    </main>
 
     <script>
-      const state = {
-        menu: [],
-        cart: []
-      };
+      const plugin = window.Capacitor?.Plugins?.KioskServer;
+      const statusText = document.getElementById('statusText');
+      const statusDot = document.getElementById('statusDot');
+      const detail = document.getElementById('serverDetail');
+      const toggle = document.getElementById('serverToggle');
+      const message = document.getElementById('message');
+      let working = false;
 
-      async function loadMenu() {
-        const res = await fetch('/api/menu');
-        const data = await res.json();
-        state.menu = data.menu;
-        renderMenu();
+      function setUrl(id, url) {
+        const link = document.getElementById(id);
+        link.href = url || '#';
+        link.textContent = url || 'Available when server is on';
       }
 
-      function renderMenu() {
-        const menu = document.getElementById('menu');
-        menu.innerHTML = state.menu.map(item => `
-          <div class="item">
-            <h3>${item.name}</h3>
-            <p>₹${item.price}</p>
-            <button onclick="addToCart(${item.id})">Add to cart</button>
-          </div>
-        `).join('');
+      async function refreshStatus() {
+        if (!plugin) {
+          statusText.textContent = 'App bridge unavailable';
+          detail.textContent = 'Close and reopen the installed Food Kiosk app.';
+          toggle.textContent = 'Server control unavailable';
+          toggle.disabled = true;
+          return;
+        }
+
+        try {
+          const result = await plugin.getStatus();
+          const running = Boolean(result.running);
+          const enabled = Boolean(result.enabled);
+          statusText.textContent = running ? 'Server on' : enabled ? 'Starting server' : 'Server off';
+          statusDot.classList.toggle('on', running);
+          detail.textContent = result.error || (running
+            ? 'This phone is hosting the kiosk on port ' + result.port + '.'
+            : enabled ? 'The service is starting. Keep this app open for a moment.' : 'Start the phone server to connect your iPad.');
+          toggle.textContent = enabled ? 'Turn server off' : 'Turn server on';
+          toggle.classList.toggle('off', enabled);
+          toggle.disabled = working;
+
+          const base = result.ipAddress ? 'http://' + result.ipAddress + ':' + result.port : '';
+          const kiosk = base ? base + '/kiosk.html' : '';
+          const admin = base ? base + '/admin.html' : '';
+          setUrl('kioskUrl', kiosk);
+          setUrl('adminUrl', admin);
+          document.getElementById('openKiosk').href = kiosk || '#';
+          document.getElementById('openAdmin').href = admin || '#';
+        } catch (error) {
+          statusText.textContent = 'Server status unavailable';
+          detail.textContent = error.message || 'Reopen the app and check its notification permission.';
+        }
       }
 
-      function addToCart(id) {
-        const item = state.menu.find(x => x.id === id);
-        if (!item) return;
+      toggle.addEventListener('click', async () => {
+        if (!plugin || working) return;
+        working = true;
+        message.textContent = '';
+        toggle.disabled = true;
+        try {
+          const state = await plugin.getStatus();
+          if (state.enabled) await plugin.stopServer();
+          else await plugin.startServer();
+          await refreshStatus();
+        } catch (error) {
+          message.textContent = error.message || 'Could not change server state.';
+        } finally {
+          working = false;
+          await refreshStatus();
+        }
+      });
 
-        const existing = state.cart.find(x => x.id === id);
-        if (existing) existing.qty += 1;
-        else state.cart.push({ ...item, qty: 1 });
-
-        renderCart();
-      }
-
-      function renderCart() {
-        const list = document.getElementById('cart-items');
-        list.innerHTML = state.cart.map(item => `
-          <div class="cart-item">
-            <span>${item.name} x ${item.qty}</span>
-            <span>₹${item.price * item.qty}</span>
-          </div>
-        `).join('');
-
-        const total = state.cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-        document.getElementById('total').textContent = `₹${total}`;
-      }
-
-      async function placeOrder() {
-        if (!state.cart.length) return alert('Cart is empty');
-
-        const res = await fetch('/api/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cart: state.cart, customerName: 'iPad Customer' })
+      document.querySelectorAll('[data-copy]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const value = document.getElementById(button.dataset.copy).href;
+          if (!value || value.endsWith('#')) return;
+          try {
+            await navigator.clipboard.writeText(value);
+            message.textContent = 'Link copied.';
+          } catch {
+            message.textContent = 'Copy unavailable. Press and hold the link to copy it.';
+          }
         });
+      });
 
-        const data = await res.json();
-        alert(`Order placed successfully: #${data.order.id}`);
-        state.cart = [];
-        renderCart();
-      }
-
-      loadMenu();
+      refreshStatus();
+      setInterval(refreshStatus, 2500);
     </script>
   </body>
 </html>
