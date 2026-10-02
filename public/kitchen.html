@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Kitchen Display</title>
+<style>
+  :root {
+    --bg:#0b0f14; --panel:#121821; --card:#1a2330; --line:#232e3d;
+    --text:#f2f5f9; --muted:#9aa7b5; --amber:#f5a524; --green:#2ecc71; --blue:#4da3ff;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,"Segoe UI",Roboto,sans-serif; min-height:100vh; }
+  header { display:flex; align-items:center; padding:14px 22px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:20px; letter-spacing:2px; }
+  #live { margin-left:auto; font-size:13px; font-weight:700; color:var(--muted); }
+  #live .dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--green); margin-right:6px; }
+  #live.off .dot { background:var(--red); }
+  #board { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; padding:20px; }
+  .ticket { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px; }
+  .ticket .num { font-size:38px; font-weight:900; letter-spacing:1px; }
+  .ticket .when { font-size:12px; color:var(--muted); }
+  .ticket .items { font-size:16px; line-height:1.5; font-weight:600; }
+  .badge { align-self:flex-start; padding:4px 12px; border-radius:999px; font-size:12px; font-weight:800; letter-spacing:1px; }
+  .badge.new { background:#13202a; color:var(--blue); }
+  .badge.preparing { background:#2a2313; color:var(--amber); }
+  .badge.ready { background:#10221a; color:var(--green); }
+  .ticket button {
+    margin-top:auto; height:52px; border:none; border-radius:12px;
+    font-size:15px; font-weight:800; cursor:pointer;
+    background:var(--amber); color:#171207;
+  }
+  .ticket[data-status="preparing"] button { background:var(--green); color:#04110a; }
+  .ticket[data-status="ready"] button { background:#1a1f2a; color:var(--muted); }
+  .empty { grid-column:1/-1; text-align:center; color:var(--muted); padding:60px 0; font-size:16px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>LIVE ORDERS</h1>
+  <div id="live"><span class="dot"></span>CONNECTED</div>
+</header>
+<div id="board"><div class="empty">No active orders.</div></div>
+<script>
+(() => {
+  'use strict';
+  const board = document.getElementById('board');
+  const live = document.getElementById('live');
+  const NEXT = { new: 'preparing', preparing: 'ready', ready: 'completed' };
+  const LABEL = { new: 'START PREPARING', preparing: 'MARK READY', ready: 'COLLECT / COMPLETE' };
+
+  async function load() {
+    try {
+      const r = await fetch('/api/kitchen/orders');
+      render(await r.json());
+      live.classList.remove('off');
+    } catch {
+      live.classList.add('off');
+    }
+  }
+
+  function render(orders) {
+    if (!orders.length) {
+      board.innerHTML = '<div class="empty">No active orders.</div>';
+      return;
+    }
+    board.innerHTML = orders.map((o) => `
+      <div class="ticket" data-id="${o.id}" data-status="${o.status}">
+        <div class="num">#${o.orderNumber}</div>
+        <div class="when">${new Date(o.createdAt + 'Z').toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
+        <span class="badge ${o.status}">${o.status.toUpperCase()}</span>
+        <div class="items">${o.items.map((i) => `${esc(i.name)} ×${i.qty}`).join('<br>')}</div>
+        <button data-id="${o.id}" data-next="${NEXT[o.status] || ''}">${LABEL[o.status] || 'COMPLETED'}</button>
+      </div>`).join('');
+  }
+
+  function esc(s) { return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+  board.addEventListener('click', async (e) => {
+    const b = e.target.closest('button[data-next]');
+    if (!b || !b.dataset.next) return;
+    b.disabled = true;
+    await fetch(`/api/kitchen/orders/${b.dataset.id}/status`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ status: b.dataset.next }),
+    }).catch(() => {});
+    load();
+  });
+
+  // live updates via SSE; poll as a fallback every 10s
+  try {
+    const es = new EventSource('/api/events');
+    es.onopen = () => live.classList.remove('off');
+    es.onerror = () => live.classList.add('off');
+    es.onmessage = (ev) => {
+      try {
+        const d = JSON.parse(ev.data);
+        if (['order_paid', 'order_status', 'order_created'].includes(d.type)) load();
+      } catch {}
+    };
+  } catch {}
+  setInterval(load, 10000);
+  load();
+})();
+</script>
+</body>
+</html>

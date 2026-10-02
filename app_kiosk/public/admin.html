@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 0; background: #f3f4f6; color: #111827; }
+      .container { max-width: 900px; margin: 40px auto; background: white; padding: 24px; border-radius: 14px; }
+      input, button { padding: 10px; margin: 8px 0; }
+      .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-top: 20px; }
+      .card { background: #eef2ff; border-radius: 12px; padding: 16px; }
+      ul { padding-left: 18px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Admin Panel</h1>
+
+      <div>
+        <input id="pin" type="password" placeholder="Enter PIN" />
+        <button onclick="login()">Login</button>
+      </div>
+
+      <div id="dashboard" style="display:none;">
+        <div class="stats">
+          <div class="card"><strong>Orders</strong><div id="orders-count">0</div></div>
+          <div class="card"><strong>Revenue</strong><div id="revenue">₹0</div></div>
+          <div class="card"><strong>Pending</strong><div id="pending">0</div></div>
+        </div>
+
+        <h3>Recent Orders</h3>
+        <ul id="orders"></ul>
+      </div>
+    </div>
+
+    <script>
+      async function login() {
+        const pin = document.getElementById('pin').value;
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin })
+        });
+
+        const data = await res.json();
+        if (!res.ok) return alert(data.message || 'Login failed');
+
+        document.getElementById('dashboard').style.display = 'block';
+        loadStats();
+      }
+
+      async function loadStats() {
+        const statsRes = await fetch('/api/admin/stats');
+        const stats = await statsRes.json();
+
+        document.getElementById('orders-count').textContent = stats.orders;
+        document.getElementById('revenue').textContent = `₹${stats.totalRevenue}`;
+        document.getElementById('pending').textContent = stats.pending;
+
+        const ordersRes = await fetch('/api/orders');
+        const data = await ordersRes.json();
+
+        const list = document.getElementById('orders');
+        list.innerHTML = data.orders.map(order => `
+          <li>
+            Order #${order.id} - ${order.customerName} - ₹${order.total} - ${order.status}
+          </li>
+        `).join('');
+      }
+
+      setInterval(loadStats, 5000);
+    </script>
+  </body>
+</html>

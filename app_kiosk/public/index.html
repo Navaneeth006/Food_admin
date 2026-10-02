@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kiosk</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 0; background: #111827; color: white; }
+      .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+      .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+      .menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+      .item { background: #1f2937; padding: 16px; border-radius: 12px; }
+      .item button { width: 100%; background: #f59e0b; border: none; border-radius: 8px; padding: 10px; font-weight: 700; }
+      .cart { background: #1f2937; border-radius: 12px; padding: 16px; margin-top: 20px; }
+      .cart-item { display: flex; justify-content: space-between; margin-bottom: 12px; }
+      .pay-btn { margin-top: 16px; width: 100%; background: #10b981; color: white; border: none; border-radius: 8px; padding: 12px; font-size: 18px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Food Kiosk</h1>
+        <span id="status">Online</span>
+      </div>
+
+      <div id="menu" class="menu"></div>
+
+      <div class="cart">
+        <h2>Cart</h2>
+        <div id="cart-items"></div>
+        <div class="cart-item"><strong>Total</strong> <strong id="total">₹0</strong></div>
+        <button class="pay-btn" onclick="placeOrder()">Pay Now</button>
+      </div>
+    </div>
+
+    <script>
+      const state = {
+        menu: [],
+        cart: []
+      };
+
+      async function loadMenu() {
+        const res = await fetch('/api/menu');
+        const data = await res.json();
+        state.menu = data.menu;
+        renderMenu();
+      }
+
+      function renderMenu() {
+        const menu = document.getElementById('menu');
+        menu.innerHTML = state.menu.map(item => `
+          <div class="item">
+            <h3>${item.name}</h3>
+            <p>₹${item.price}</p>
+            <button onclick="addToCart(${item.id})">Add to cart</button>
+          </div>
+        `).join('');
+      }
+
+      function addToCart(id) {
+        const item = state.menu.find(x => x.id === id);
+        if (!item) return;
+
+        const existing = state.cart.find(x => x.id === id);
+        if (existing) existing.qty += 1;
+        else state.cart.push({ ...item, qty: 1 });
+
+        renderCart();
+      }
+
+      function renderCart() {
+        const list = document.getElementById('cart-items');
+        list.innerHTML = state.cart.map(item => `
+          <div class="cart-item">
+            <span>${item.name} x ${item.qty}</span>
+            <span>₹${item.price * item.qty}</span>
+          </div>
+        `).join('');
+
+        const total = state.cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+        document.getElementById('total').textContent = `₹${total}`;
+      }
+
+      async function placeOrder() {
+        if (!state.cart.length) return alert('Cart is empty');
+
+        const res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cart: state.cart, customerName: 'iPad Customer' })
+        });
+
+        const data = await res.json();
+        alert(`Order placed successfully: #${data.order.id}`);
+        state.cart = [];
+        renderCart();
+      }
+
+      loadMenu();
+    </script>
+  </body>
+</html>

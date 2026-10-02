@@ -1,0 +1,38 @@
+{
+  "name": "foodtruck-kiosk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Food truck self-service kiosk: menu, cart, UPI/Razorpay payments, thermal printing, admin + kitchen displays",
+  "type": "module",
+  "main": "server/app.js",
+  "scripts": {
+    "start": "node server/app.js",
+    "dev": "node --watch server/app.js",
+    "seed": "node server/db/seed.js",
+    "reset:demo": "node server/db/seed.js --reset",
+    "test": "node --test server/tests/*.test.js",
+    "test:quiet": "node --test --test-reporter=dot server/tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "better-sqlite3": "^12.4.1",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "canvas": "^3.2.3",
+    "jsqr": "^1.4.0",
+    "qrcode": "^1.5.4",
+    "sharp": "^0.34.4"
+  },
+  "optionalDependencies": {
+    "escpos": "github:song940/node-escpos#master",
+    "escpos-network": "github:song940/node-escpos-usb#master",
+    "escpos-serial": "github:song940/node-escpos-usb#master",
+    "escpos-usb": "github:song940/node-escpos-usb#master"
+  }
+}

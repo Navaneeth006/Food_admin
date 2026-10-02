@@ -1,0 +1,8 @@
+{
+  "appId": "com.appkiosk.phone",
+  "appName": "App Kiosk",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https"
+  }
+}
