@@ -1,6 +1,7 @@
 # GitHub APK build
 
-This folder is ready to build an Android APK from GitHub Actions.
+GitHub Actions builds the Android APK for this phone-hosted kiosk when changes
+are pushed to `app_kiosk/`, and also on a manual workflow run.
 
 ## Files included
 
@@ -11,17 +12,18 @@ This folder is ready to build an Android APK from GitHub Actions.
 - `app_kiosk/android` — Capacitor Android project
 - `.github/workflows/android-apk.yml` — GitHub Actions build workflow
 
-## How to generate APK
+## Download the phone-hosted kiosk APK
 
-1. Push this project to GitHub.
-2. Open the repository on GitHub.
-3. Go to Actions.
-4. Run the workflow named `Build Android APK`.
-5. Download the generated APK from the artifact.
+1. Open the repository on GitHub and select **Actions**.
+2. Open the successful **Build Android APK** workflow run.
+3. Download the **`app-kiosk-debug-apk`** artifact and extract `app-debug.apk`.
 
-The APK output is produced at:
+The local build output is:
 
 `app_kiosk/android/app/build/outputs/apk/debug/app-debug.apk`
+
+The same workflow also builds the separate legacy project in `foodtruck-apk/`;
+its artifact has a different name.
 
 ## Notes
 

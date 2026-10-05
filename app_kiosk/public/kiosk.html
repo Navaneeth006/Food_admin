@@ -1,117 +1,412 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Food Kiosk</title>
-    <style>
-      body { font-family: Arial, sans-serif; margin: 0; background: #111827; color: white; }
-      .container { max-width: 900px; margin: 0 auto; padding: 24px; }
-      .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-      .menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
-      .item { background: #1f2937; padding: 16px; border-radius: 12px; }
-      .item button { width: 100%; background: #f59e0b; border: none; border-radius: 8px; padding: 10px; font-weight: 700; }
-      .cart { background: #1f2937; border-radius: 12px; padding: 16px; margin-top: 20px; }
-      .cart-item { display: flex; justify-content: space-between; margin-bottom: 12px; }
-      .pay-btn { margin-top: 16px; width: 100%; background: #10b981; color: white; border: none; border-radius: 8px; padding: 12px; font-size: 18px; }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <div class="header">
-        <h1>Food Kiosk</h1>
-        <span id="status">Online</span>
-      </div>
-
-      <p id="connection-message" role="status">Loading menu...</p>
-      <div id="menu" class="menu"></div>
-
-      <div class="cart">
-        <h2>Cart</h2>
-        <div id="cart-items"></div>
-        <div class="cart-item"><strong>Total</strong> <strong id="total">₹0</strong></div>
-        <button class="pay-btn" onclick="placeOrder()">Place order</button>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f7f4">
+  <title>Order · Food Kiosk</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #242820;
+      --muted: #777b70;
+      --line: #e8e9e2;
+      --paper: #fff;
+      --canvas: #f7f7f4;
+      --accent: #b64f2c;
+      --accent-dark: #963d21;
+      --accent-soft: #f8eee8;
+      --green: #367454;
+      --shadow: 0 14px 40px rgba(39, 43, 33, .07);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); font: 16px/1.5 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: wait; opacity: .58; }
+    .topbar { height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 clamp(20px, 5vw, 76px); background: var(--paper); border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; border-radius: 13px; background: var(--accent); color: white; font-size: 22px; }
+    .brand-copy { min-width: 0; }
+    .brand-name { overflow: hidden; font-size: 15px; font-weight: 800; letter-spacing: .04em; text-overflow: ellipsis; white-space: nowrap; }
+    .brand-caption { color: var(--muted); font-size: 12px; }
+    .connection { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 650; }
+    .connection-dot { width: 8px; height: 8px; border-radius: 50%; background: #63a77a; }
+    .connection.offline .connection-dot { background: #cf584b; }
+    main { width: min(1360px, 100%); margin: 0 auto; padding: 40px clamp(20px, 5vw, 76px) 72px; }
+    .intro { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 30px; }
+    .eyebrow { margin: 0 0 9px; color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(30px, 4vw, 46px); line-height: 1.08; letter-spacing: -.045em; }
+    .intro-copy { max-width: 570px; margin: 12px 0 0; color: var(--muted); font-size: 15px; }
+    .service-note { display: flex; align-items: center; gap: 10px; padding: 12px 15px; border: 1px solid #eaded6; border-radius: 12px; background: #fffaf7; color: #75432f; font-size: 13px; font-weight: 650; white-space: nowrap; }
+    .service-note span { font-size: 18px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; align-items: start; gap: 28px; }
+    .catalog-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+    .catalog-title { margin: 0; font-size: 21px; letter-spacing: -.02em; }
+    .search { width: min(270px, 48%); height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; outline: none; background: white; color: var(--ink); }
+    .search:focus { border-color: #c67c5f; box-shadow: 0 0 0 3px rgba(182, 79, 44, .1); }
+    .filters { display: flex; gap: 8px; margin: 0 0 24px; overflow-x: auto; scrollbar-width: none; }
+    .filters::-webkit-scrollbar { display: none; }
+    .filter { flex: 0 0 auto; padding: 8px 15px; border: 1px solid var(--line); border-radius: 999px; background: white; color: #5e6259; font-size: 13px; font-weight: 700; }
+    .filter.active { border-color: var(--ink); background: var(--ink); color: white; }
+    .menu-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .item { display: flex; min-height: 212px; flex-direction: column; padding: 17px; border: 1px solid var(--line); border-radius: 15px; background: white; box-shadow: 0 3px 12px rgba(39, 43, 33, .025); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+    .item:hover { transform: translateY(-2px); border-color: #d5cfc5; box-shadow: var(--shadow); }
+    .item-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .item-icon { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 13px; background: #f7f1e9; font-size: 25px; }
+    .item-category { color: #92958c; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .item h3 { margin: 18px 0 3px; font-size: 16px; line-height: 1.3; letter-spacing: -.015em; }
+    .item-description { margin: 0 0 15px; color: var(--muted); font-size: 12px; }
+    .item-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; }
+    .item-price { font-size: 16px; font-weight: 800; }
+    .add-button { min-height: 37px; padding: 0 13px; border: 1px solid #e6cfc3; border-radius: 9px; background: #fffaf7; color: var(--accent-dark); font-size: 13px; font-weight: 750; }
+    .add-button:hover { background: var(--accent-soft); }
+    .order-card { position: sticky; top: 20px; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: white; box-shadow: var(--shadow); }
+    .order-heading { padding: 21px 21px 16px; border-bottom: 1px solid var(--line); }
+    .order-heading h2 { margin: 0; font-size: 19px; letter-spacing: -.025em; }
+    .order-heading p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+    .cart-lines { max-height: 42vh; min-height: 112px; overflow: auto; padding: 6px 20px; }
+    .empty-cart { display: grid; min-height: 100px; place-items: center; color: #85897f; font-size: 13px; text-align: center; }
+    .cart-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 13px 0; border-bottom: 1px solid #f0f0eb; }
+    .cart-row:last-child { border-bottom: 0; }
+    .cart-name { font-size: 13px; font-weight: 700; }
+    .cart-unit { color: var(--muted); font-size: 12px; }
+    .cart-price { align-self: center; font-size: 13px; font-weight: 750; }
+    .qty-control { display: inline-flex; align-items: center; gap: 10px; margin-top: 7px; }
+    .qty-control button { display: grid; width: 25px; height: 25px; place-items: center; border: 1px solid var(--line); border-radius: 7px; background: white; color: var(--ink); line-height: 1; }
+    .qty-control span { min-width: 12px; font-size: 12px; font-weight: 700; text-align: center; }
+    .order-summary { padding: 15px 20px 20px; border-top: 1px solid var(--line); }
+    .summary-row { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 8px; color: var(--muted); font-size: 13px; }
+    .summary-total { display: flex; justify-content: space-between; margin: 14px 0 15px; padding-top: 13px; border-top: 1px dashed #dedfd8; font-size: 17px; font-weight: 800; }
+    .submit-button { width: 100%; min-height: 49px; border: 0; border-radius: 10px; background: var(--accent); color: white; font-size: 14px; font-weight: 800; letter-spacing: .01em; transition: background .15s ease; }
+    .submit-button:hover:not(:disabled) { background: var(--accent-dark); }
+    .counter-note { display: flex; gap: 8px; margin: 13px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .counter-note span { color: var(--green); }
+    .mobile-cart { display: none; }
+    .message { margin: 0 0 18px; padding: 13px 15px; border: 1px solid #e4c8bd; border-radius: 10px; background: #fff7f3; color: #803b27; font-size: 13px; }
+    .message[hidden] { display: none; }
+    .empty-menu { grid-column: 1/-1; padding: 45px 20px; border: 1px dashed #d9d9d1; border-radius: 14px; color: var(--muted); text-align: center; }
+    .modal-backdrop { position: fixed; z-index: 5; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(31, 34, 29, .42); }
+    .modal-backdrop[hidden] { display: none; }
+    .confirmation { width: min(430px, 100%); padding: 30px; border-radius: 20px; background: white; box-shadow: 0 24px 80px rgba(0, 0, 0, .2); text-align: center; animation: rise .2s ease-out; }
+    @keyframes rise { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .confirm-icon { display: grid; width: 58px; height: 58px; place-items: center; margin: 0 auto 15px; border-radius: 50%; background: #eaf4ed; color: var(--green); font-size: 28px; font-weight: 800; }
+    .confirmation h2 { margin: 0; font-size: 23px; letter-spacing: -.03em; }
+    .confirmation-copy { margin: 9px 0 19px; color: var(--muted); font-size: 13px; }
+    .token-ticket { padding: 17px; border: 1px dashed #d6c9be; border-radius: 12px; background: #fcfaf7; }
+    .token-label { color: var(--muted); font-size: 11px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+    .token-value { margin: 2px 0; color: var(--accent-dark); font-size: 38px; font-weight: 850; letter-spacing: -.04em; }
+    .due-value { font-size: 15px; font-weight: 750; }
+    .print-message { margin: 15px 0 0; color: var(--green); font-size: 12px; }
+    .print-message.failed { color: #a64032; }
+    .confirm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 19px; }
+    .confirm-actions button { min-height: 45px; border: 1px solid var(--line); border-radius: 9px; background: white; color: var(--ink); font-size: 13px; font-weight: 750; }
+    .confirm-actions .primary { border-color: var(--accent); background: var(--accent); color: white; }
+    @media (max-width: 1060px) {
+      main { padding-right: 28px; padding-left: 28px; }
+      .layout { grid-template-columns: minmax(0, 1fr) 310px; gap: 18px; }
+      .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .service-note { white-space: normal; }
+    }
+    @media (max-width: 760px) {
+      .topbar { height: 66px; padding: 0 18px; }
+      main { padding: 30px 18px 108px; }
+      .intro { display: block; margin-bottom: 25px; }
+      .intro-copy { max-width: 520px; }
+      .service-note { display: inline-flex; margin-top: 15px; }
+      .layout { display: block; }
+      .catalog-head { align-items: flex-start; flex-direction: column; }
+      .search { width: 100%; }
+      .menu-grid { gap: 11px; }
+      .item { min-height: 200px; padding: 13px; }
+      .item h3 { font-size: 14px; }
+      .item-description { font-size: 11px; }
+      .add-button { padding: 0 9px; }
+      .order-card { position: static; margin-top: 24px; }
+      .mobile-cart { position: fixed; z-index: 2; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 13px 18px calc(13px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: rgba(255, 255, 255, .96); box-shadow: 0 -8px 24px rgba(39, 43, 33, .07); backdrop-filter: blur(12px); }
+      .mobile-cart[hidden] { display: none; }
+      .mobile-cart-copy { display: grid; line-height: 1.35; }
+      .mobile-cart-count { color: var(--muted); font-size: 11px; }
+      .mobile-cart-total { font-size: 15px; font-weight: 800; }
+      .mobile-cart button { min-height: 44px; padding: 0 18px; border: 0; border-radius: 9px; background: var(--accent); color: white; font-size: 13px; font-weight: 800; }
+    }
+    @media (max-width: 390px) {
+      .menu-grid { grid-template-columns: 1fr; }
+      .item { min-height: 174px; }
+      .item-description { margin-bottom: 10px; }
+      .confirmation { padding: 24px 19px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">✳</div>
+      <div class="brand-copy">
+        <div class="brand-name" id="business-name">FOOD KIOSK</div>
+        <div class="brand-caption">Freshly made · Made to order</div>
       </div>
     </div>
+    <div class="connection" id="connection"><span class="connection-dot"></span><span id="connection-label">Connecting</span></div>
+  </header>
 
-    <script>
-      const state = {
-        menu: [],
-        cart: []
-      };
+  <main>
+    <section class="intro">
+      <div>
+        <p class="eyebrow">A good choice, made easy</p>
+        <h1>Order something<br>you’ll love.</h1>
+        <p class="intro-copy">Choose your favourites and place your order. We’ll prepare it fresh while you pay at the counter.</p>
+      </div>
+      <div class="service-note"><span aria-hidden="true">↗</span> Pay at the counter · Cash or PhonePe QR</div>
+    </section>
+
+    <div id="message" class="message" role="alert" hidden></div>
+    <div class="layout">
+      <section aria-labelledby="menu-heading">
+        <div class="catalog-head">
+          <h2 class="catalog-title" id="menu-heading">The menu</h2>
+          <input class="search" id="search" type="search" placeholder="Find something tasty" aria-label="Search menu">
+        </div>
+        <nav class="filters" id="filters" aria-label="Menu categories"></nav>
+        <div class="menu-grid" id="menu" aria-live="polite">
+          <div class="empty-menu">Loading today’s menu…</div>
+        </div>
+      </section>
+
+      <aside class="order-card" id="your-order" aria-labelledby="order-heading">
+        <div class="order-heading">
+          <h2 id="order-heading">Your order <span id="item-count" style="color:#92958c;font-size:13px;font-weight:600"></span></h2>
+          <p>Review everything before sending it to the kitchen.</p>
+        </div>
+        <div class="cart-lines" id="cart"></div>
+        <div class="order-summary">
+          <div class="summary-row"><span>Items</span><span id="subtotal">₹0</span></div>
+          <div class="summary-total"><span>Total due</span><span id="total">₹0</span></div>
+          <button class="submit-button" id="place-order" type="button" disabled>Place order</button>
+          <p class="counter-note"><span aria-hidden="true">●</span> Payment is collected at the counter. Your kitchen token prints when the order is placed.</p>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <div class="mobile-cart" id="mobile-cart" hidden>
+    <div class="mobile-cart-copy"><span class="mobile-cart-count" id="mobile-count">0 items</span><span class="mobile-cart-total" id="mobile-total">₹0</span></div>
+    <button id="review-order" type="button">Review order</button>
+  </div>
+
+  <div class="modal-backdrop" id="confirmation" hidden>
+    <section class="confirmation" role="dialog" aria-modal="true" aria-labelledby="confirm-heading">
+      <div class="confirm-icon" aria-hidden="true">✓</div>
+      <h2 id="confirm-heading">Order sent to the kitchen</h2>
+      <p class="confirmation-copy">Please take your printed bill to the counter and pay before collecting your order.</p>
+      <div class="token-ticket">
+        <div class="token-label">Your kitchen token</div>
+        <div class="token-value" id="token-number">—</div>
+        <div class="due-value">Amount due <span id="confirmation-total">₹0</span></div>
+      </div>
+      <p class="print-message" id="print-message"></p>
+      <div class="confirm-actions">
+        <button id="close-confirmation" type="button">Done</button>
+        <button class="primary" id="new-order" type="button">Start a new order</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+      const state = { menu: [], cart: new Map(), category: 'All', submitting: false };
+      const $ = (selector) => document.querySelector(selector);
+      const categoryIcons = { main: '🍔', sides: '🍟', drinks: '🥤', extras: '🧀' };
+      const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
+      const formatMoney = (amount) => currency.format(Number(amount) || 0);
+      const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+      }[character]));
 
       async function loadMenu() {
-        const message = document.getElementById('connection-message');
+        const connection = $('#connection');
         try {
-          const res = await fetch('/api/menu');
-          if (!res.ok) throw new Error('The phone server returned an error.');
-          const data = await res.json();
-          if (!Array.isArray(data.menu) || data.menu.length === 0) throw new Error('No menu items are available.');
+          const response = await fetch('/api/menu');
+          if (!response.ok) throw new Error('The kiosk server could not load the menu.');
+          const data = await response.json();
+          if (!Array.isArray(data.menu) || data.menu.length === 0) throw new Error('There are no menu items available right now.');
           state.menu = data.menu;
-          message.textContent = '';
-          document.getElementById('status').textContent = 'Online';
+          if (data.business?.name) $('#business-name').textContent = data.business.name;
+          $('#connection-label').textContent = 'Open';
+          connection.classList.remove('offline');
+          renderFilters();
           renderMenu();
+          renderCart();
         } catch (error) {
-          message.textContent = error.message + ' Check that the phone server is on and both devices use the same Wi-Fi.';
-          document.getElementById('status').textContent = 'Offline';
+          $('#connection-label').textContent = 'Offline';
+          connection.classList.add('offline');
+          $('#menu').innerHTML = `<div class="empty-menu">${esc(error.message)} Check that the phone server is on and connected to Wi-Fi.</div>`;
         }
       }
 
-      function renderMenu() {
-        const menu = document.getElementById('menu');
-        menu.innerHTML = state.menu.map(item => `
-          <div class="item">
-            <h3>${item.name}</h3>
-            <p>₹${item.price}</p>
-            <button onclick="addToCart(${item.id})">Add to cart</button>
-          </div>
-        `).join('');
+      function renderFilters() {
+        const categories = ['All', ...new Set(state.menu.map((item) => item.category).filter(Boolean))];
+        $('#filters').innerHTML = categories.map((category) => `
+          <button class="filter${category === state.category ? ' active' : ''}" type="button" data-category="${esc(category)}" aria-pressed="${category === state.category}">
+            ${esc(category)}
+          </button>`).join('');
       }
 
-      function addToCart(id) {
-        const item = state.menu.find(x => x.id === id);
+      function renderMenu() {
+        const query = $('#search').value.trim().toLowerCase();
+        const visible = state.menu.filter((item) =>
+          (state.category === 'All' || item.category === state.category)
+          && `${item.name} ${item.description || ''}`.toLowerCase().includes(query)
+        );
+        $('#menu').innerHTML = visible.length ? visible.map((item) => {
+          const inCart = state.cart.get(item.id)?.qty || 0;
+          return `
+            <article class="item">
+              <div class="item-top">
+                <div class="item-icon" aria-hidden="true">${esc(item.emoji || categoryIcons[String(item.category || '').toLowerCase()] || '🍽️')}</div>
+                <span class="item-category">${esc(item.category || 'Made fresh')}</span>
+              </div>
+              <h3>${esc(item.name)}</h3>
+              ${item.description ? `<p class="item-description">${esc(item.description)}</p>` : '<p class="item-description">Prepared fresh when you order.</p>'}
+              <div class="item-bottom">
+                <span class="item-price">${formatMoney(item.price)}</span>
+                <button class="add-button" type="button" data-add="${Number(item.id)}">${inCart ? `Add more · ${inCart}` : '＋ Add'}</button>
+              </div>
+            </article>`;
+        }).join('') : '<div class="empty-menu">No items match your search. Try another name or category.</div>';
+      }
+
+      function addItem(id) {
+        const item = state.menu.find((candidate) => candidate.id === id);
         if (!item) return;
+        const current = state.cart.get(id);
+        state.cart.set(id, { ...item, qty: (current?.qty || 0) + 1 });
+        renderMenu();
+        renderCart();
+      }
 
-        const existing = state.cart.find(x => x.id === id);
-        if (existing) existing.qty += 1;
-        else state.cart.push({ ...item, qty: 1 });
-
+      function changeQuantity(id, delta) {
+        const entry = state.cart.get(id);
+        if (!entry) return;
+        const qty = entry.qty + delta;
+        if (qty <= 0) state.cart.delete(id);
+        else state.cart.set(id, { ...entry, qty });
+        renderMenu();
         renderCart();
       }
 
       function renderCart() {
-        const list = document.getElementById('cart-items');
-        list.innerHTML = state.cart.map(item => `
-          <div class="cart-item">
-            <span>${item.name} x ${item.qty}</span>
-            <span>₹${item.price * item.qty}</span>
-          </div>
-        `).join('');
+        const entries = [...state.cart.values()];
+        const quantity = entries.reduce((sum, item) => sum + item.qty, 0);
+        const total = entries.reduce((sum, item) => sum + item.price * item.qty, 0);
+        $('#item-count').textContent = quantity ? `· ${quantity} ${quantity === 1 ? 'item' : 'items'}` : '';
+        $('#subtotal').textContent = formatMoney(total);
+        $('#total').textContent = formatMoney(total);
+        $('#mobile-total').textContent = formatMoney(total);
+        $('#mobile-count').textContent = `${quantity} ${quantity === 1 ? 'item' : 'items'}`;
+        $('#mobile-cart').hidden = quantity === 0;
+        $('#place-order').disabled = quantity === 0 || state.submitting;
+        $('#cart').innerHTML = entries.length ? entries.map((item) => `
+          <div class="cart-row">
+            <div>
+              <div class="cart-name">${esc(item.name)}</div>
+              <div class="cart-unit">${formatMoney(item.price)} each</div>
+              <div class="qty-control" aria-label="Quantity for ${esc(item.name)}">
+                <button type="button" data-change="${Number(item.id)}" data-delta="-1" aria-label="Remove one ${esc(item.name)}">−</button>
+                <span>${item.qty}</span>
+                <button type="button" data-change="${Number(item.id)}" data-delta="1" aria-label="Add one ${esc(item.name)}">+</button>
+              </div>
+            </div>
+            <div class="cart-price">${formatMoney(item.price * item.qty)}</div>
+          </div>`).join('') : '<div class="empty-cart">Your order is empty.<br>Add something delicious to get started.</div>';
+      }
 
-        const total = state.cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-        document.getElementById('total').textContent = `₹${total}`;
+      function showMessage(text) {
+        const message = $('#message');
+        message.textContent = text;
+        message.hidden = false;
+        message.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
 
       async function placeOrder() {
-        if (!state.cart.length) return alert('Cart is empty');
-
+        if (state.submitting || state.cart.size === 0) return;
+        state.submitting = true;
+        $('#place-order').textContent = 'Sending order…';
+        renderCart();
         try {
-          const res = await fetch('/api/orders', {
+          const response = await fetch('/api/orders', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cart: state.cart, customerName: 'iPad Customer' })
+            body: JSON.stringify({
+              cart: [...state.cart.values()].map((item) => ({ id: item.id, qty: item.qty })),
+              customerName: 'Walk-in',
+            }),
           });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Order could not be placed.');
-          alert(`Order placed successfully: #${data.order.id}`);
-          state.cart = [];
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || result.message || 'Your order could not be placed.');
+          const order = result.order;
+          $('#token-number').textContent = `#${order.tokenNumber || order.id + 100}`;
+          $('#confirmation-total').textContent = formatMoney(order.total);
+          const printMessage = $('#print-message');
+          if (order.printStatus === 'failed') {
+            printMessage.textContent = 'The bill did not print. Please tell the counter your token number.';
+            printMessage.classList.add('failed');
+          } else if (order.printStatus === 'not-configured') {
+            printMessage.textContent = 'No printer is configured here. Please show your token number at the counter.';
+            printMessage.classList.add('failed');
+          } else {
+            printMessage.textContent = 'Your bill is printing. Pay by cash or PhonePe QR at the counter.';
+            printMessage.classList.remove('failed');
+          }
+          state.cart.clear();
+          $('#message').hidden = true;
           renderCart();
+          renderMenu();
+          $('#confirmation').hidden = false;
+          $('#new-order').focus();
         } catch (error) {
-          alert(error.message + ' Check the phone server and try again.');
+          showMessage(`${error.message} Please check your order and try again.`);
+        } finally {
+          state.submitting = false;
+          $('#place-order').textContent = 'Place order';
+          renderCart();
         }
       }
 
+      $('#filters').addEventListener('click', (event) => {
+        const button = event.target.closest('[data-category]');
+        if (!button) return;
+        state.category = button.dataset.category;
+        renderFilters();
+        renderMenu();
+      });
+      $('#menu').addEventListener('click', (event) => {
+        const button = event.target.closest('[data-add]');
+        if (button) addItem(Number(button.dataset.add));
+      });
+      $('#cart').addEventListener('click', (event) => {
+        const button = event.target.closest('[data-change]');
+        if (button) changeQuantity(Number(button.dataset.change), Number(button.dataset.delta));
+      });
+      $('#search').addEventListener('input', renderMenu);
+      $('#place-order').addEventListener('click', placeOrder);
+      $('#review-order').addEventListener('click', () => $('#your-order').scrollIntoView({ behavior: 'smooth', block: 'center' }));
+      $('#close-confirmation').addEventListener('click', () => { $('#confirmation').hidden = true; });
+      $('#new-order').addEventListener('click', () => {
+        $('#confirmation').hidden = true;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        $('#search').focus({ preventScroll: true });
+      });
+      $('#confirmation').addEventListener('click', (event) => {
+        if (event.target === $('#confirmation')) $('#confirmation').hidden = true;
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') $('#confirmation').hidden = true;
+      });
       loadMenu();
-    </script>
-  </body>
+    })();
+  </script>
+</body>
 </html>

@@ -26,6 +26,11 @@
       .url-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; padding: 12px; border: 1px solid #3c4a5d; border-radius: 6px; }
       .url-row a { overflow-wrap: anywhere; color: #7dd3fc; }
       .url-row button { padding: 8px 10px; border: 1px solid #69778a; border-radius: 5px; background: #263445; color: #fff; }
+      select, .printer-actions button { min-height: 44px; padding: 9px 12px; border: 1px solid #536176; border-radius: 5px; background: #172333; color: #fff; font: inherit; }
+      select { width: 100%; margin-top: 14px; }
+      .printer-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+      .printer-actions button { flex: 1 1 150px; }
+      .printer-actions .primary { background: #f3b54a; border-color: #f3b54a; color: #241706; font-weight: 700; }
       .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
       .actions a { flex: 1 1 180px; padding: 13px; border-radius: 5px; background: #10b981; color: #071d18; font-weight: 700; text-align: center; text-decoration: none; }
       .actions a.secondary { background: #f3b54a; color: #241706; }
@@ -59,6 +64,20 @@
           <a id="openAdmin" class="secondary" href="#">Open admin</a>
         </div>
       </section>
+
+      <section class="panel" aria-labelledby="printerTitle">
+        <h2 id="printerTitle">Bluetooth printer</h2>
+        <p class="muted">Pair a Classic Bluetooth ESC/POS printer in Android Settings, then select it here.</p>
+        <select id="printerSelect" aria-label="Paired Bluetooth printer">
+          <option value="">Loading paired printers...</option>
+        </select>
+        <div class="printer-actions">
+          <button id="pairPrinter" type="button">Open Bluetooth settings</button>
+          <button id="refreshPrinters" type="button">Refresh devices</button>
+          <button id="testPrinter" class="primary" type="button" disabled>Print test receipt</button>
+        </div>
+        <p id="printerMessage" class="muted" role="status"></p>
+      </section>
     </main>
 
     <script>
@@ -68,6 +87,9 @@
       const detail = document.getElementById('serverDetail');
       const toggle = document.getElementById('serverToggle');
       const message = document.getElementById('message');
+      const printerSelect = document.getElementById('printerSelect');
+      const printerMessage = document.getElementById('printerMessage');
+      const testPrinter = document.getElementById('testPrinter');
       let working = false;
 
       function setUrl(id, url) {
@@ -111,6 +133,64 @@
         }
       }
 
+      async function refreshPrinters() {
+        if (!plugin) return;
+        try {
+          const result = await plugin.getPairedPrinters();
+          const devices = result.devices || [];
+          printerSelect.replaceChildren(new Option(
+            devices.length ? 'Select a paired printer' : 'No paired printers found',
+            ''
+          ));
+          devices.forEach((device) => {
+            const option = new Option(device.name + ' (' + device.address + ')', device.address);
+            option.selected = device.address === result.selectedAddress;
+            printerSelect.add(option);
+          });
+          testPrinter.disabled = !result.selectedAddress;
+          printerMessage.textContent = devices.length
+            ? 'Choose a paired printer. Classic SPP ESC/POS is supported.'
+            : 'Pair the printer first in Android Bluetooth settings.';
+        } catch (error) {
+          printerSelect.replaceChildren(new Option('Bluetooth permission needed', ''));
+          testPrinter.disabled = true;
+          printerMessage.textContent = error.message || 'Allow Nearby devices permission, then refresh.';
+        }
+      }
+
+      document.getElementById('pairPrinter').addEventListener('click', async () => {
+        try {
+          await plugin.openBluetoothSettings();
+        } catch (error) {
+          printerMessage.textContent = error.message || 'Could not open Bluetooth settings.';
+        }
+      });
+      document.getElementById('refreshPrinters').addEventListener('click', refreshPrinters);
+      printerSelect.addEventListener('change', async () => {
+        testPrinter.disabled = true;
+        if (!printerSelect.value) return;
+        try {
+          await plugin.selectPrinter({ address: printerSelect.value });
+          printerMessage.textContent = 'Printer selected.';
+          testPrinter.disabled = false;
+        } catch (error) {
+          printerMessage.textContent = error.message || 'Could not select this printer.';
+        }
+      });
+      testPrinter.addEventListener('click', async () => {
+        testPrinter.disabled = true;
+        printerMessage.textContent = 'Sending test receipt...';
+        try {
+          await plugin.testPrint();
+          printerMessage.textContent = 'Test receipt sent.';
+        } catch (error) {
+          printerMessage.textContent = error.message || 'Print failed. Check printer power and pairing.';
+        } finally {
+          testPrinter.disabled = !printerSelect.value;
+        }
+      });
+      window.addEventListener('focus', refreshPrinters);
+
       toggle.addEventListener('click', async () => {
         if (!plugin || working) return;
         working = true;
@@ -143,6 +223,7 @@
       });
 
       refreshStatus();
+      refreshPrinters();
       setInterval(refreshStatus, 2500);
     </script>
   </body>

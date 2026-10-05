@@ -21,20 +21,44 @@ const menu = [
 
 const orders = [];
 
+function nextOrderId() {
+  return orders.reduce((highest, order) => Math.max(highest, Number(order.id) || 0), 0) + 1;
+}
+
 app.get('/api/menu', (req, res) => {
   res.json({ menu });
 });
 
 app.post('/api/orders', (req, res) => {
   const { cart, customerName } = req.body || {};
-  const total = (cart || []).reduce((sum, item) => sum + Number(item.price || 0) * Number(item.qty || 1), 0);
+  if (!Array.isArray(cart) || cart.length === 0) {
+    res.status(400).json({ error: 'Cart is empty' });
+    return;
+  }
 
+  const items = [];
+  for (const requested of cart) {
+    const menuItem = menu.find((item) => item.id === Number(requested?.id));
+    const quantity = Number(requested?.qty);
+    if (!menuItem || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
+      res.status(400).json({ error: 'Invalid menu item or quantity' });
+      return;
+    }
+    items.push({ ...menuItem, qty: quantity });
+  }
+
+  const id = nextOrderId();
+  const total = items.reduce((sum, item) => sum + item.price * item.qty, 0);
   const order = {
-    id: orders.length + 1,
+    id,
+    tokenNumber: id + 100,
     customerName: customerName || 'Walk-in',
-    items: cart || [],
+    items,
     total,
-    status: 'new'
+    status: 'awaiting_payment',
+    paymentStatus: 'pending',
+    paymentMethod: null,
+    printStatus: 'not-configured'
   };
 
   orders.push(order);
@@ -42,8 +66,31 @@ app.post('/api/orders', (req, res) => {
   res.json({ ok: true, order });
 });
 
+app.post('/api/admin/orders/:id/mark-paid', (req, res) => {
+  const order = orders.find((item) => item.id === Number(req.params.id));
+  if (!order) {
+    res.status(404).json({ error: 'Order not found' });
+    return;
+  }
+  if (!['cash', 'upi'].includes(req.query.method)) {
+    res.status(400).json({ error: 'Payment method must be cash or upi' });
+    return;
+  }
+  if (order.paymentStatus !== 'paid') {
+    order.paymentStatus = 'paid';
+    order.paymentMethod = req.query.method;
+    order.status = 'new';
+    order.paidAt = Date.now();
+  }
+  res.json({ ok: true, order });
+});
+
 app.get('/api/orders', (req, res) => {
   res.json({ orders });
+});
+
+app.get('/api/admin/orders', (req, res) => {
+  res.json({ orders: orders.slice().reverse() });
 });
 
 app.post('/api/admin/login', (req, res) => {
@@ -57,11 +104,12 @@ app.post('/api/admin/login', (req, res) => {
 });
 
 app.get('/api/admin/stats', (req, res) => {
-  const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+  const paidOrders = orders.filter((order) => order.paymentStatus === 'paid');
+  const totalRevenue = paidOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
   res.json({
     orders: orders.length,
     totalRevenue,
-    pending: orders.filter((order) => order.status !== 'done').length
+    pending: orders.filter((order) => order.paymentStatus === 'pending').length
   });
 });
 

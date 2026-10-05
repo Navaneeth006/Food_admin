@@ -13,10 +13,17 @@ public class MainActivity extends BridgeActivity {
 		registerPlugin(KioskServerPlugin.class);
 		super.onCreate(savedInstanceState);
 
+		java.util.ArrayList<String> permissions = new java.util.ArrayList<>();
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-				&& checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
-				!= PackageManager.PERMISSION_GRANTED) {
-			requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 42);
+				&& checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+			permissions.add(Manifest.permission.POST_NOTIFICATIONS);
+		}
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+				&& checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+			permissions.add(Manifest.permission.BLUETOOTH_CONNECT);
+		}
+		if (!permissions.isEmpty()) {
+			requestPermissions(permissions.toArray(new String[0]), 42);
 		}
 	}
 }

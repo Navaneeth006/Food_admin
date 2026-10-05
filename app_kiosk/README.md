@@ -36,4 +36,6 @@ Then open `http://localhost:4242/` on the computer, or use the computer's LAN IP
 
 ## Current scope
 
-Orders created by the Android-hosted service are stored on that phone and survive app restarts. The sample menu and admin PIN are demo values. The **Place order** button records an order; a payment provider and Bluetooth receipt printing are not integrated yet.
+Orders created by the Android-hosted service are stored on that phone and survive app restarts. Token numbers start at **101** and continue across app restarts. Placing an order prints one bill with a kitchen-details section and a matching customer-token section, separated by a cut mark for tearing. The customer takes the bill to the counter and pays by cash or the shop's PhonePe Business QR; staff records the payment in **Admin**. The kiosk does not collect UPI payments or verify them automatically. If printing fails, Admin shows the error and offers a retry.
+
+The sample menu and admin PIN are demo values. The local Node.js development server does not have the Android Bluetooth printer and keeps development orders in memory; use the Android app for the persistent, printer-backed counter workflow.
