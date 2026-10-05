@@ -53,6 +53,14 @@
     .stat-label { color: var(--muted); font-size: 11px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
     .stat-value { margin-top: 7px; font-size: 27px; font-weight: 800; letter-spacing: -.04em; }
     .stat-card.revenue .stat-value { color: var(--green); }
+    .daily-panel { margin: 0 0 24px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 13px; background: white; }
+    .daily-panel h2 { margin: 0; font-size: 16px; }
+    .daily-list { display: grid; grid-template-columns: repeat(7, minmax(100px, 1fr)); gap: 9px; margin-top: 13px; overflow-x: auto; }
+    .daily-day { min-width: 100px; padding: 11px; border: 1px solid var(--line); border-radius: 9px; background: var(--canvas); }
+    .daily-date { color: var(--muted); font-size: 11px; font-weight: 700; }
+    .daily-orders { margin-top: 5px; font-size: 14px; font-weight: 800; }
+    .daily-revenue { color: var(--green); font-size: 12px; }
+    .print-status { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; color: var(--muted); font-size: 11px; }
     .orders-panel { overflow: hidden; border: 1px solid var(--line); border-radius: 15px; background: white; box-shadow: 0 5px 22px rgba(39, 43, 33, .035); }
     .orders-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 20px; border-bottom: 1px solid var(--line); }
     .orders-head h2 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
@@ -128,9 +136,13 @@
         <article class="stat-card revenue"><div class="stat-label">Payments received</div><div class="stat-value" id="revenue">₹0</div></article>
         <article class="stat-card"><div class="stat-label">Awaiting payment</div><div class="stat-value" id="pending">0</div></article>
       </div>
+      <section class="daily-panel" aria-labelledby="daily-heading">
+        <h2 id="daily-heading">Last 7 days</h2>
+        <div class="daily-list" id="daily-report" aria-live="polite"><div class="empty">Loading daily totals…</div></div>
+      </section>
       <section class="orders-panel" aria-labelledby="orders-heading">
         <header class="orders-head">
-          <div><h2 id="orders-heading">Recent orders</h2><p>Confirm cash or UPI at the counter before marking paid.</p></div>
+          <div><h2 id="orders-heading">Recent orders</h2><p>Confirm cash or PhonePe QR payment at the counter before marking paid.</p></div>
           <button class="refresh" id="refresh" type="button">↻ Refresh</button>
         </header>
         <div class="order-list" id="orders" aria-live="polite"><div class="empty">Loading orders…</div></div>
@@ -198,9 +210,13 @@
           if (!statsResponse.ok || !ordersResponse.ok) throw new Error('Could not load counter data.');
           const stats = await statsResponse.json();
           const data = await ordersResponse.json();
-          $('#orders-count').textContent = Number(stats.orders) || 0;
-          $('#revenue').textContent = fmt(stats.totalRevenue);
-          $('#pending').textContent = Number(stats.pending) || 0;
+          const today = new Date();
+          const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+          const todayStats = stats.daily?.[todayKey] || { orders: 0, revenue: 0 };
+          $('#orders-count').textContent = Number(todayStats.orders) || 0;
+          $('#revenue').textContent = fmt(todayStats.revenue);
+          $('#pending').textContent = Math.max(0, (Number(todayStats.orders) || 0) - (Number(todayStats.paidOrders) || 0));
+          renderDaily(stats.daily || {});
           renderOrders(Array.isArray(data.orders) ? data.orders : []);
           $('#live').classList.remove('offline');
           $('#live-label').textContent = 'Live';
@@ -213,6 +229,16 @@
         }
       }
 
+      function renderDaily(daily) {
+        const days = Object.values(daily).sort((a, b) => a.date.localeCompare(b.date));
+        $('#daily-report').innerHTML = days.length ? days.map((day) => `
+          <article class="daily-day">
+            <div class="daily-date">${esc(new Date(`${day.date}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }))}</div>
+            <div class="daily-orders">${Number(day.orders) || 0} orders</div>
+            <div class="daily-revenue">${fmt(day.revenue)} paid</div>
+          </article>`).join('') : '<div class="empty">Daily totals are not available.</div>';
+      }
+
       function renderOrders(orders) {
         $('#orders').dataset.loaded = 'true';
         if (orders.length === 0) {
@@ -222,7 +248,11 @@
         $('#orders').innerHTML = orders.slice().reverse().map((order) => {
           const token = order.tokenNumber || Number(order.id) + 100;
           const payment = order.paymentStatus || 'pending';
-          const printFailed = order.printStatus === 'failed';
+          const billPrintStatus = order.billPrintStatus || order.printStatus || 'unknown';
+          const tokenPrintStatus = order.tokenPrintStatus || order.printStatus || 'unknown';
+          const printFailed = billPrintStatus === 'failed' || tokenPrintStatus === 'failed';
+          const billRetryable = ['failed', 'not-configured', 'unknown'].includes(billPrintStatus);
+          const tokenRetryable = ['failed', 'not-configured', 'unknown'].includes(tokenPrintStatus);
           const items = Array.isArray(order.items) ? order.items.map((item) => `${esc(item.name)} × ${Number(item.qty) || 0}`).join(' · ') : '';
           const created = order.createdAt ? new Date(Number(order.createdAt)).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
           return `
@@ -235,11 +265,13 @@
                 <span class="order-total">${fmt(order.total)}</span>
                 <span class="badge ${payment === 'paid' ? 'paid' : 'pending'}">${payment === 'paid' ? `Paid · ${esc(order.paymentMethod || '')}` : 'Payment due'}</span>
               </div>
-              ${payment !== 'paid' || printFailed ? `<div class="order-actions">
+              <div class="print-status"><span>Kitchen bill: ${esc(billPrintStatus)}</span><span>Token slip: ${esc(tokenPrintStatus)}</span></div>
+              ${payment !== 'paid' || billRetryable || tokenRetryable ? `<div class="order-actions">
                 ${payment !== 'paid' ? `<button data-pay="cash" data-id="${Number(order.id)}" type="button">Cash received</button><button class="secondary" data-pay="upi" data-id="${Number(order.id)}" type="button">UPI received</button>` : ''}
-                ${printFailed ? `<button class="retry" data-print="${Number(order.id)}" type="button">Retry bill print</button>` : ''}
+                ${billRetryable ? `<button class="retry" data-print="${Number(order.id)}" data-kind="bill" type="button">Retry kitchen bill</button>` : ''}
+                ${tokenRetryable ? `<button class="retry" data-print="${Number(order.id)}" data-kind="token" type="button">Retry token slip</button>` : ''}
               </div>` : ''}
-              ${printFailed ? `<p class="print-error">Printer: ${esc(order.printError || 'The bill could not be printed.')}</p>` : ''}
+              ${printFailed ? `<p class="print-error">Printer: ${esc(order.billPrintError || order.tokenPrintError || order.printError || 'A slip could not be printed.')}</p>` : ''}
             </article>`;
         }).join('');
       }
@@ -251,11 +283,11 @@
         try {
           const url = button.dataset.pay
             ? `/api/admin/orders/${button.dataset.id}/mark-paid?method=${encodeURIComponent(button.dataset.pay)}`
-            : `/api/admin/orders/${button.dataset.print}/print`;
+            : `/api/admin/orders/${button.dataset.print}/print/${button.dataset.kind}`;
           const response = await fetch(url, { method: 'POST' });
           const result = await response.json();
           if (!response.ok) throw new Error(result.error || result.message || 'Could not update order.');
-          notify(button.dataset.pay ? `Payment recorded: ${button.dataset.pay.toUpperCase()}` : 'Bill sent to printer');
+          notify(button.dataset.pay ? `Payment recorded: ${button.dataset.pay.toUpperCase()}` : `${button.dataset.kind === 'bill' ? 'Kitchen bill' : 'Token slip'} retry queued`);
           await loadStats();
         } catch (error) {
           notify(error.message || 'Could not update order.');

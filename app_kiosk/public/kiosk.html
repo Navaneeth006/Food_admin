@@ -11,20 +11,24 @@
       --ink: #242820;
       --muted: #777b70;
       --line: #e8e9e2;
-      --paper: #fff;
+      --paper: rgba(255, 255, 255, .94);
       --canvas: #f7f7f4;
       --accent: #b64f2c;
       --accent-dark: #963d21;
       --accent-soft: #f8eee8;
       --green: #367454;
       --shadow: 0 14px 40px rgba(39, 43, 33, .07);
+      --ambience-opacity: .12;
     }
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--canvas); color: var(--ink); font: 16px/1.5 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     button, input { font: inherit; }
     button { cursor: pointer; }
     button:disabled { cursor: wait; opacity: .58; }
-    .topbar { height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 clamp(20px, 5vw, 76px); background: var(--paper); border-bottom: 1px solid var(--line); }
+    .ambient-layer { position: fixed; z-index: 0; inset: 0; overflow: hidden; pointer-events: none; }
+    .ambient-layer video { width: 100%; height: 100%; object-fit: cover; opacity: var(--ambience-opacity); filter: blur(24px) saturate(1.15); transform: scale(1.08); }
+    .ambient-wash { position: absolute; inset: 0; background: rgba(250, 249, 245, .42); }
+    .topbar { position: relative; z-index: 1; height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 clamp(20px, 5vw, 76px); background: var(--paper); border-bottom: 1px solid var(--line); backdrop-filter: blur(14px); }
     .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .brand-mark { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; border-radius: 13px; background: var(--accent); color: white; font-size: 22px; }
     .brand-copy { min-width: 0; }
@@ -33,7 +37,7 @@
     .connection { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 650; }
     .connection-dot { width: 8px; height: 8px; border-radius: 50%; background: #63a77a; }
     .connection.offline .connection-dot { background: #cf584b; }
-    main { width: min(1360px, 100%); margin: 0 auto; padding: 40px clamp(20px, 5vw, 76px) 72px; }
+    main { position: relative; z-index: 1; width: min(1360px, 100%); margin: 0 auto; padding: 40px clamp(20px, 5vw, 76px) 72px; }
     .intro { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 30px; }
     .eyebrow { margin: 0 0 9px; color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
     h1 { margin: 0; font-size: clamp(30px, 4vw, 46px); line-height: 1.08; letter-spacing: -.045em; }
@@ -50,18 +54,17 @@
     .filter { flex: 0 0 auto; padding: 8px 15px; border: 1px solid var(--line); border-radius: 999px; background: white; color: #5e6259; font-size: 13px; font-weight: 700; }
     .filter.active { border-color: var(--ink); background: var(--ink); color: white; }
     .menu-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-    .item { display: flex; min-height: 212px; flex-direction: column; padding: 17px; border: 1px solid var(--line); border-radius: 15px; background: white; box-shadow: 0 3px 12px rgba(39, 43, 33, .025); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+    .item { display: flex; min-height: 0; flex-direction: column; padding: 12px; border: 1px solid var(--line); border-radius: 15px; background: var(--paper); box-shadow: 0 3px 12px rgba(39, 43, 33, .025); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
     .item:hover { transform: translateY(-2px); border-color: #d5cfc5; box-shadow: var(--shadow); }
-    .item-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .item-icon { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 13px; background: #f7f1e9; font-size: 25px; }
-    .item-category { color: #92958c; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-    .item h3 { margin: 18px 0 3px; font-size: 16px; line-height: 1.3; letter-spacing: -.015em; }
-    .item-description { margin: 0 0 15px; color: var(--muted); font-size: 12px; }
-    .item-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; }
+    .item-media { width: 100%; aspect-ratio: 1; overflow: hidden; border-radius: 11px; background: linear-gradient(135deg, #f5e7d7, #eee9dc); }
+    .item-media video { width: 100%; height: 100%; object-fit: cover; filter: saturate(.85); }
+    .item h3 { margin: 13px 2px 3px; font-size: 16px; line-height: 1.3; letter-spacing: -.015em; }
+    .item-description { margin: 0 2px 13px; color: var(--muted); font-size: 12px; }
+    .item-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: auto 2px 2px; }
     .item-price { font-size: 16px; font-weight: 800; }
     .add-button { min-height: 37px; padding: 0 13px; border: 1px solid #e6cfc3; border-radius: 9px; background: #fffaf7; color: var(--accent-dark); font-size: 13px; font-weight: 750; }
     .add-button:hover { background: var(--accent-soft); }
-    .order-card { position: sticky; top: 20px; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: white; box-shadow: var(--shadow); }
+    .order-card { position: sticky; top: 20px; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); box-shadow: var(--shadow); }
     .order-heading { padding: 21px 21px 16px; border-bottom: 1px solid var(--line); }
     .order-heading h2 { margin: 0; font-size: 19px; letter-spacing: -.025em; }
     .order-heading p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
@@ -80,8 +83,7 @@
     .summary-total { display: flex; justify-content: space-between; margin: 14px 0 15px; padding-top: 13px; border-top: 1px dashed #dedfd8; font-size: 17px; font-weight: 800; }
     .submit-button { width: 100%; min-height: 49px; border: 0; border-radius: 10px; background: var(--accent); color: white; font-size: 14px; font-weight: 800; letter-spacing: .01em; transition: background .15s ease; }
     .submit-button:hover:not(:disabled) { background: var(--accent-dark); }
-    .counter-note { display: flex; gap: 8px; margin: 13px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
-    .counter-note span { color: var(--green); }
+    .counter-note { margin: 12px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; text-align: center; }
     .mobile-cart { display: none; }
     .message { margin: 0 0 18px; padding: 13px 15px; border: 1px solid #e4c8bd; border-radius: 10px; background: #fff7f3; color: #803b27; font-size: 13px; }
     .message[hidden] { display: none; }
@@ -102,6 +104,18 @@
     .confirm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 19px; }
     .confirm-actions button { min-height: 45px; border: 1px solid var(--line); border-radius: 9px; background: white; color: var(--ink); font-size: 13px; font-weight: 750; }
     .confirm-actions .primary { border-color: var(--accent); background: var(--accent); color: white; }
+    body[data-theme="dark"], body[data-theme="neon"] { --ink:#f3f3ee; --muted:#aeb2a9; --line:#373b3d; --paper:rgba(29,32,35,.94); --canvas:#191b1f; --accent-dark:#ffb195; --accent-soft:#3c2c28; --shadow:0 14px 40px rgba(0,0,0,.3); }
+    body[data-theme="dark"] .ambient-wash, body[data-theme="neon"] .ambient-wash { background:rgba(21,23,26,.55); }
+    body[data-theme="dark"] .filter, body[data-theme="dark"] .search, body[data-theme="dark"] .qty-control button,
+    body[data-theme="dark"] .confirm-actions button { background-color:var(--paper); color:var(--ink); }
+    body[data-theme="dark"] .item, body[data-theme="dark"] .order-card, body[data-theme="dark"] .confirmation,
+    body[data-theme="dark"] .token-ticket, body[data-theme="dark"] .cart-lines, body[data-theme="dark"] .order-summary,
+    body[data-theme="neon"] .item, body[data-theme="neon"] .order-card, body[data-theme="neon"] .confirmation,
+    body[data-theme="neon"] .token-ticket, body[data-theme="neon"] .cart-lines, body[data-theme="neon"] .order-summary { background-color:var(--paper); color:var(--ink); }
+    body[data-theme="dark"] .filter.active, body[data-theme="neon"] .filter.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+    body[data-theme="dark"] .item-description, body[data-theme="dark"] .cart-unit, body[data-theme="dark"] .order-heading p { color:var(--muted); }
+    body[data-theme="dark"] .token-ticket, body[data-theme="neon"] .token-ticket { border-color:var(--line); }
+    body[data-neon="1"] .item, body[data-neon="1"] .order-card { border-color:var(--accent); box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 17px color-mix(in srgb, var(--accent) 24%, transparent); }
     @media (max-width: 1060px) {
       main { padding-right: 28px; padding-left: 28px; }
       .layout { grid-template-columns: minmax(0, 1fr) 310px; gap: 18px; }
@@ -121,6 +135,7 @@
       .item { min-height: 200px; padding: 13px; }
       .item h3 { font-size: 14px; }
       .item-description { font-size: 11px; }
+      .item-bottom { margin-top: 10px; }
       .add-button { padding: 0 9px; }
       .order-card { position: static; margin-top: 24px; }
       .mobile-cart { position: fixed; z-index: 2; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 13px 18px calc(13px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: rgba(255, 255, 255, .96); box-shadow: 0 -8px 24px rgba(39, 43, 33, .07); backdrop-filter: blur(12px); }
@@ -140,6 +155,10 @@
   </style>
 </head>
 <body>
+  <div class="ambient-layer" aria-hidden="true">
+    <video id="ambient-video" autoplay muted loop playsinline preload="auto"></video>
+    <div class="ambient-wash"></div>
+  </div>
   <header class="topbar">
     <div class="brand">
       <div class="brand-mark" aria-hidden="true">✳</div>
@@ -183,8 +202,8 @@
         <div class="order-summary">
           <div class="summary-row"><span>Items</span><span id="subtotal">₹0</span></div>
           <div class="summary-total"><span>Total due</span><span id="total">₹0</span></div>
-          <button class="submit-button" id="place-order" type="button" disabled>Place order</button>
-          <p class="counter-note"><span aria-hidden="true">●</span> Payment is collected at the counter. Your kitchen token prints when the order is placed.</p>
+          <button class="submit-button" id="place-order" type="button" disabled>Confirm order</button>
+          <p class="counter-note">Confirm your items to print a kitchen bill and a separate token slip.</p>
         </div>
       </aside>
     </div>
@@ -198,14 +217,14 @@
   <div class="modal-backdrop" id="confirmation" hidden>
     <section class="confirmation" role="dialog" aria-modal="true" aria-labelledby="confirm-heading">
       <div class="confirm-icon" aria-hidden="true">✓</div>
-      <h2 id="confirm-heading">Order sent to the kitchen</h2>
-      <p class="confirmation-copy">Please take your printed bill to the counter and pay before collecting your order.</p>
+      <h2 id="confirm-heading">Your order is confirmed</h2>
+      <p class="confirmation-copy">Wait for both slips. Give the kitchen bill to the kitchen and keep your token slip for collection.</p>
       <div class="token-ticket">
         <div class="token-label">Your kitchen token</div>
         <div class="token-value" id="token-number">—</div>
         <div class="due-value">Amount due <span id="confirmation-total">₹0</span></div>
       </div>
-      <p class="print-message" id="print-message"></p>
+      <p class="print-message" id="print-message" aria-live="polite"></p>
       <div class="confirm-actions">
         <button id="close-confirmation" type="button">Done</button>
         <button class="primary" id="new-order" type="button">Start a new order</button>
@@ -216,9 +235,8 @@
   <script>
     (() => {
       'use strict';
-      const state = { menu: [], cart: new Map(), category: 'All', submitting: false };
+      const state = { menu: [], cart: new Map(), category: 'All', submitting: false, printPoll: 0, backgroundVideo: '/media/food-atmosphere.mp4' };
       const $ = (selector) => document.querySelector(selector);
-      const categoryIcons = { main: '🍔', sides: '🍟', drinks: '🥤', extras: '🧀' };
       const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
       const formatMoney = (amount) => currency.format(Number(amount) || 0);
       const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
@@ -233,7 +251,13 @@
           const data = await response.json();
           if (!Array.isArray(data.menu) || data.menu.length === 0) throw new Error('There are no menu items available right now.');
           state.menu = data.menu;
-          if (data.business?.name) $('#business-name').textContent = data.business.name;
+          const business = data.business || {};
+          if (business.name) $('#business-name').textContent = business.name;
+          state.backgroundVideo = business.kiosk_background_video || state.backgroundVideo;
+          applyAppearance(business);
+          const ambientVideo = $('#ambient-video');
+          ambientVideo.src = state.backgroundVideo;
+          ambientVideo.onerror = () => { ambientVideo.hidden = true; };
           $('#connection-label').textContent = 'Open';
           connection.classList.remove('offline');
           renderFilters();
@@ -244,6 +268,17 @@
           connection.classList.add('offline');
           $('#menu').innerHTML = `<div class="empty-menu">${esc(error.message)} Check that the phone server is on and connected to Wi-Fi.</div>`;
         }
+      }
+
+      function applyAppearance(settings) {
+        const theme = ['dark', 'neon'].includes(settings.kiosk_theme) ? settings.kiosk_theme : 'light';
+        document.body.dataset.theme = theme;
+        document.body.dataset.neon = settings.kiosk_neon_borders === '1' ? '1' : '0';
+        const color = /^#[0-9a-fA-F]{6}$/.test(settings.kiosk_accent_color || '') ? settings.kiosk_accent_color : '#b64f2c';
+        document.documentElement.style.setProperty('--accent', color);
+        const opacity = Math.min(24, Math.max(3, Number(settings.kiosk_background_opacity) || 12));
+        document.documentElement.style.setProperty('--ambience-opacity', `${opacity / 100}`);
+        document.querySelector('meta[name="theme-color"]').content = theme === 'light' ? '#f7f7f4' : '#191b1f';
       }
 
       function renderFilters() {
@@ -264,9 +299,10 @@
           const inCart = state.cart.get(item.id)?.qty || 0;
           return `
             <article class="item">
-              <div class="item-top">
-                <div class="item-icon" aria-hidden="true">${esc(item.emoji || categoryIcons[String(item.category || '').toLowerCase()] || '🍽️')}</div>
-                <span class="item-category">${esc(item.category || 'Made fresh')}</span>
+              <div class="item-media">
+                <video autoplay muted loop playsinline preload="metadata" aria-label="${esc(item.name)} food animation">
+                  <source src="${esc(item.videoUrl || state.backgroundVideo)}">
+                </video>
               </div>
               <h3>${esc(item.name)}</h3>
               ${item.description ? `<p class="item-description">${esc(item.description)}</p>` : '<p class="item-description">Prepared fresh when you order.</p>'}
@@ -350,28 +386,52 @@
           $('#token-number').textContent = `#${order.tokenNumber || order.id + 100}`;
           $('#confirmation-total').textContent = formatMoney(order.total);
           const printMessage = $('#print-message');
-          if (order.printStatus === 'failed') {
-            printMessage.textContent = 'The bill did not print. Please tell the counter your token number.';
-            printMessage.classList.add('failed');
-          } else if (order.printStatus === 'not-configured') {
-            printMessage.textContent = 'No printer is configured here. Please show your token number at the counter.';
-            printMessage.classList.add('failed');
-          } else {
-            printMessage.textContent = 'Your bill is printing. Pay by cash or PhonePe QR at the counter.';
-            printMessage.classList.remove('failed');
-          }
+          printMessage.textContent = 'Printing the kitchen bill first. Your token slip follows in 3 seconds…';
+          printMessage.classList.remove('failed');
           state.cart.clear();
           $('#message').hidden = true;
           renderCart();
           renderMenu();
           $('#confirmation').hidden = false;
           $('#new-order').focus();
+          if (Number(order.id)) pollPrintStatus(Number(order.id));
         } catch (error) {
           showMessage(`${error.message} Please check your order and try again.`);
         } finally {
           state.submitting = false;
-          $('#place-order').textContent = 'Place order';
+          $('#place-order').textContent = 'Confirm order';
           renderCart();
+        }
+      }
+
+      async function pollPrintStatus(orderId) {
+        window.clearTimeout(state.printPoll);
+        try {
+          const response = await fetch(`/api/orders/${orderId}/status`);
+          if (!response.ok) throw new Error('Could not confirm the printer status.');
+          const status = await response.json();
+          const message = $('#print-message');
+          if (status.billPrintStatus === 'failed' || status.tokenPrintStatus === 'failed') {
+            message.textContent = 'A slip could not print. Show your token at the counter and ask staff to retry.';
+            message.classList.add('failed');
+            return;
+          }
+          if (status.billPrintStatus === 'not-configured' || status.tokenPrintStatus === 'not-configured') {
+            message.textContent = 'No printer is configured. Show your token to staff and ask for both slips.';
+            message.classList.add('failed');
+            return;
+          }
+          if (status.billPrintStatus === 'printed' && status.tokenPrintStatus === 'printed') {
+            message.textContent = 'Both slips are ready. Give the bill to the kitchen and keep your token slip.';
+            message.classList.remove('failed');
+            return;
+          }
+          if (status.billPrintStatus === 'printed') {
+            message.textContent = 'Kitchen bill printed. Your token slip will print in 3 seconds…';
+          }
+          state.printPoll = window.setTimeout(() => pollPrintStatus(orderId), 1000);
+        } catch {
+          $('#print-message').textContent = 'Check that both printed slips are collected. Ask staff if a slip is missing.';
         }
       }
 
@@ -391,10 +451,12 @@
         if (button) changeQuantity(Number(button.dataset.change), Number(button.dataset.delta));
       });
       $('#search').addEventListener('input', renderMenu);
+      $('#place-order').textContent = 'Confirm order';
       $('#place-order').addEventListener('click', placeOrder);
       $('#review-order').addEventListener('click', () => $('#your-order').scrollIntoView({ behavior: 'smooth', block: 'center' }));
       $('#close-confirmation').addEventListener('click', () => { $('#confirmation').hidden = true; });
       $('#new-order').addEventListener('click', () => {
+        window.clearTimeout(state.printPoll);
         $('#confirmation').hidden = true;
         window.scrollTo({ top: 0, behavior: 'smooth' });
         $('#search').focus({ preventScroll: true });

@@ -25,6 +25,10 @@ function nextOrderId() {
   return orders.reduce((highest, order) => Math.max(highest, Number(order.id) || 0), 0) + 1;
 }
 
+function localDayKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 app.get('/api/menu', (req, res) => {
   res.json({ menu });
 });
@@ -58,12 +62,30 @@ app.post('/api/orders', (req, res) => {
     status: 'awaiting_payment',
     paymentStatus: 'pending',
     paymentMethod: null,
-    printStatus: 'not-configured'
+    printStatus: 'not-configured',
+    billPrintStatus: 'not-configured',
+    tokenPrintStatus: 'not-configured',
+    createdAt: Date.now()
   };
 
   orders.push(order);
 
   res.json({ ok: true, order });
+});
+
+app.get('/api/orders/:id/status', (req, res) => {
+  const order = orders.find((item) => item.id === Number(req.params.id));
+  if (!order) {
+    res.status(404).json({ error: 'Order not found' });
+    return;
+  }
+  res.json({
+    orderId: order.id,
+    tokenNumber: order.tokenNumber,
+    billPrintStatus: order.billPrintStatus,
+    tokenPrintStatus: order.tokenPrintStatus,
+    printStatus: order.printStatus
+  });
 });
 
 app.post('/api/admin/orders/:id/mark-paid', (req, res) => {
@@ -106,10 +128,29 @@ app.post('/api/admin/login', (req, res) => {
 app.get('/api/admin/stats', (req, res) => {
   const paidOrders = orders.filter((order) => order.paymentStatus === 'paid');
   const totalRevenue = paidOrders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+  const daily = {};
+  const today = new Date();
+  for (let offset = 6; offset >= 0; offset -= 1) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - offset);
+    const key = localDayKey(date);
+    daily[key] = { date: key, orders: 0, paidOrders: 0, revenue: 0 };
+  }
+  for (const order of orders) {
+    const key = localDayKey(new Date(Number(order.createdAt) || 0));
+    const day = daily[key];
+    if (!day) continue;
+    day.orders += 1;
+    if (order.paymentStatus === 'paid') {
+      day.paidOrders += 1;
+      day.revenue += Number(order.total) || 0;
+    }
+  }
   res.json({
     orders: orders.length,
     totalRevenue,
-    pending: orders.filter((order) => order.paymentStatus === 'pending').length
+    pending: orders.filter((order) => order.paymentStatus === 'pending').length,
+    daily
   });
 });
 

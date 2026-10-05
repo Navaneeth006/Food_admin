@@ -31,10 +31,24 @@
       .printer-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
       .printer-actions button { flex: 1 1 150px; }
       .printer-actions .primary { background: #f3b54a; border-color: #f3b54a; color: #241706; font-weight: 700; }
+      .settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+      .field { display: grid; gap: 6px; color: #aab7c8; font-size: 12px; font-weight: 700; }
+      .field input, .field select, .product-row input { width: 100%; min-height: 42px; margin: 0; padding: 8px 10px; border: 1px solid #536176; border-radius: 5px; background: #172333; color: #fff; font: inherit; }
+      .field input[type="color"] { padding: 4px; }
+      .field small { color: #8997aa; font-weight: 400; }
+      .product-list { display: grid; gap: 10px; margin-top: 16px; }
+      .product-row { display: grid; grid-template-columns: minmax(110px, 1.2fr) minmax(110px, 1.5fr) 95px 72px 75px; align-items: center; gap: 8px; padding: 10px; border: 1px solid #3c4a5d; border-radius: 6px; }
+      .product-row label { display: flex; align-items: center; gap: 6px; color: #aab7c8; font-size: 12px; }
+      .product-row input[type="checkbox"] { width: 17px; min-height: 17px; }
+      .product-row .video-upload { grid-column: 1 / -1; }
+      .save-config { margin-top: 16px; padding: 12px 16px; border: 0; border-radius: 5px; background: #10b981; color: #062b25; font: inherit; font-weight: 800; }
+      .save-config:disabled { opacity: .6; }
+      .config-message { min-height: 22px; margin: 10px 0 0; color: #fbbf24; font-size: 13px; }
       .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
       .actions a { flex: 1 1 180px; padding: 13px; border-radius: 5px; background: #10b981; color: #071d18; font-weight: 700; text-align: center; text-decoration: none; }
       .actions a.secondary { background: #f3b54a; color: #241706; }
       #message { min-height: 24px; margin: 12px 0 0; color: #fbbf24; }
+      @media (max-width: 620px) { .settings-grid { grid-template-columns: 1fr; } .product-row { grid-template-columns: 1fr 1fr; } .product-row .video-upload { grid-column: 1 / -1; } }
       @media (max-width: 420px) { main { padding: 22px 14px 36px; } header { align-items: flex-start; flex-direction: column; margin-bottom: 24px; } .panel { padding: 18px; } }
     </style>
   </head>
@@ -78,10 +92,35 @@
         </div>
         <p id="printerMessage" class="muted" role="status"></p>
       </section>
+
+      <section class="panel" id="kiosk-settings" aria-labelledby="settingsTitle">
+        <h2 id="settingsTitle">Kiosk appearance & menu</h2>
+        <p class="muted">Changes are saved on this phone and appear on connected kiosks.</p>
+        <div class="settings-grid">
+          <label class="field">Theme
+            <select id="theme"><option value="light">Light</option><option value="dark">Dark</option><option value="neon">Neon accent</option></select>
+          </label>
+          <label class="field">Accent color<input id="accent-color" type="color" value="#b64f2c"></label>
+          <label class="field">Background video URL
+            <input id="background-video" type="url" placeholder="/media/your-video.mp4">
+            <small>Upload MP4/WebM or paste a direct HTTPS MP4/WebM URL.</small>
+          </label>
+          <label class="field">Background opacity
+            <input id="background-opacity" type="range" min="3" max="24" value="12">
+            <small><span id="opacity-value">12</span>% · kept subtle for readability</small>
+          </label>
+          <label class="field"><span>Neon borders</span><input id="neon-borders" type="checkbox"></label>
+          <label class="field">Upload background video<input id="background-upload" type="file" accept="video/mp4,video/webm"></label>
+        </div>
+        <div class="product-list" id="product-list"><p class="muted">Loading menu settings…</p></div>
+        <button id="save-config" class="save-config" type="button">Save appearance and menu</button>
+        <p id="config-message" class="config-message" role="status"></p>
+      </section>
     </main>
 
     <script>
       const plugin = window.Capacitor?.Plugins?.KioskServer;
+      const settingsApiBase = plugin ? 'http://127.0.0.1:4242' : '';
       const statusText = document.getElementById('statusText');
       const statusDot = document.getElementById('statusDot');
       const detail = document.getElementById('serverDetail');
@@ -90,7 +129,135 @@
       const printerSelect = document.getElementById('printerSelect');
       const printerMessage = document.getElementById('printerMessage');
       const testPrinter = document.getElementById('testPrinter');
+      const configMessage = document.getElementById('config-message');
+      const productList = document.getElementById('product-list');
+      let configProducts = [];
       let working = false;
+      let configLoaded = false;
+      let configLoading = false;
+
+      function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        }[character]));
+      }
+
+      async function loadConfiguration() {
+        if (configLoaded || configLoading) return;
+        configLoading = true;
+        try {
+          const response = await fetch(settingsApiBase + '/api/admin/config');
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || 'Could not load kiosk settings.');
+          const settings = data.settings || {};
+          document.getElementById('theme').value = settings.kiosk_theme || 'light';
+          document.getElementById('accent-color').value = settings.kiosk_accent_color || '#b64f2c';
+          document.getElementById('background-video').value = settings.kiosk_background_video || '';
+          document.getElementById('background-opacity').value = settings.kiosk_background_opacity || '12';
+          document.getElementById('opacity-value').textContent = document.getElementById('background-opacity').value;
+          document.getElementById('neon-borders').checked = settings.kiosk_neon_borders === '1';
+          configProducts = Array.isArray(data.products) ? data.products : [];
+          productList.innerHTML = configProducts.map((product) => `
+            <div class="product-row" data-id="${Number(product.id)}">
+              <input class="product-name" aria-label="Item name" maxlength="80" value="${escapeHtml(product.name)}">
+              <input class="product-description" aria-label="Item description" maxlength="200" value="${escapeHtml(product.description)}">
+              <input class="product-price" aria-label="Price in rupees" type="number" min="0" step="0.01" value="${(Number(product.pricePaise) / 100).toFixed(2)}">
+              <input class="product-sort" aria-label="Display order" type="number" min="0" max="9999" value="${Number(product.sortOrder)}">
+              <label><input class="product-available" type="checkbox" ${product.available ? 'checked' : ''}> Available</label>
+              <input class="video-url video-upload" aria-label="Item video URL" placeholder="Optional item video URL" value="${escapeHtml(product.videoUrl || '')}">
+              <label class="video-upload">Upload item video<input class="product-video" data-product-video="${Number(product.id)}" type="file" accept="video/mp4,video/webm"></label>
+            </div>`).join('') || '<p class="muted">No menu items found.</p>';
+          configMessage.textContent = '';
+          configLoaded = true;
+        } catch (error) {
+          configMessage.textContent = error.message || 'Could not load kiosk settings.';
+        } finally {
+          configLoading = false;
+        }
+      }
+
+      async function uploadVideo(file) {
+        if (!file) return '';
+        const body = new FormData();
+        body.append('video', file);
+        const response = await fetch(settingsApiBase + '/api/admin/videos', { method: 'POST', body });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Video upload failed.');
+        return result.url;
+      }
+
+      document.getElementById('background-upload').addEventListener('change', async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        configMessage.textContent = 'Uploading background video…';
+        try {
+          document.getElementById('background-video').value = await uploadVideo(file);
+          configMessage.textContent = 'Background video uploaded. Save to apply it.';
+        } catch (error) {
+          configMessage.textContent = error.message || 'Video upload failed.';
+        } finally {
+          event.target.value = '';
+        }
+      });
+
+      productList.addEventListener('change', async (event) => {
+        const input = event.target.closest('[data-product-video]');
+        const file = input?.files?.[0];
+        if (!input || !file) return;
+        configMessage.textContent = 'Uploading item video…';
+        try {
+          input.closest('.product-row').querySelector('.video-url').value = await uploadVideo(file);
+          configMessage.textContent = 'Item video uploaded. Save to apply it.';
+        } catch (error) {
+          configMessage.textContent = error.message || 'Video upload failed.';
+        } finally {
+          input.value = '';
+        }
+      });
+
+      document.getElementById('background-opacity').addEventListener('input', (event) => {
+        document.getElementById('opacity-value').textContent = event.target.value;
+      });
+      document.getElementById('save-config').addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        configMessage.textContent = 'Saving settings…';
+        try {
+          const products = [...productList.querySelectorAll('.product-row')].map((row) => ({
+            id: Number(row.dataset.id),
+            name: row.querySelector('.product-name').value,
+            description: row.querySelector('.product-description').value,
+            price: Number(row.querySelector('.product-price').value),
+            sortOrder: Number(row.querySelector('.product-sort').value),
+            available: row.querySelector('.product-available').checked,
+            videoUrl: row.querySelector('.video-url').value,
+          }));
+          const response = await fetch(settingsApiBase + '/api/admin/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              appearance: {
+                theme: document.getElementById('theme').value,
+                accentColor: document.getElementById('accent-color').value,
+                backgroundVideo: document.getElementById('background-video').value,
+                backgroundOpacity: Number(document.getElementById('background-opacity').value),
+                neonBorders: document.getElementById('neon-borders').checked,
+              },
+              products,
+            }),
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || 'Could not save settings.');
+          configLoaded = true;
+          configMessage.textContent = 'Saved. Refresh the kiosk page to see the changes.';
+          await loadConfiguration();
+          configMessage.textContent = 'Saved. Refresh the kiosk page to see the changes.';
+        } catch (error) {
+          configMessage.textContent = error.message || 'Could not save settings.';
+        } finally {
+          button.disabled = false;
+        }
+      });
 
       function setUrl(id, url) {
         const link = document.getElementById(id);
@@ -127,6 +294,7 @@
           setUrl('adminUrl', admin);
           document.getElementById('openKiosk').href = kiosk || '#';
           document.getElementById('openAdmin').href = admin || '#';
+          if (running) loadConfiguration();
         } catch (error) {
           statusText.textContent = 'Server status unavailable';
           detail.textContent = error.message || 'Reopen the app and check its notification permission.';
@@ -224,6 +392,7 @@
 
       refreshStatus();
       refreshPrinters();
+      if (!plugin) loadConfiguration();
       setInterval(refreshStatus, 2500);
     </script>
   </body>

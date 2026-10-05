@@ -14,7 +14,7 @@ Download the `app-kiosk-debug-apk` artifact from the successful GitHub Actions r
 4. Open the **iPad URL** shown in the app on the iPad. It looks like `http://PHONE-IP:4242/kiosk.html`.
 5. Use **Open admin** on the phone to open the admin page. The demo PIN is `1234`.
 
-The notification has a **Stop server** action. Turning the server off in the app or notification also disables automatic restart.
+The notification has a **Stop server** action. Turning the server off in the app or notification also disables automatic restart. The in-app **Kiosk appearance & menu** panel lets staff change the kiosk theme/accent, background video, item videos, prices, availability, and display order while the phone server is running.
 
 ## Background and restart behavior
 
@@ -36,6 +36,8 @@ Then open `http://localhost:4242/` on the computer, or use the computer's LAN IP
 
 ## Current scope
 
-Orders created by the Android-hosted service are stored on that phone and survive app restarts. Token numbers start at **101** and continue across app restarts. Placing an order prints one bill with a kitchen-details section and a matching customer-token section, separated by a cut mark for tearing. The customer takes the bill to the counter and pays by cash or the shop's PhonePe Business QR; staff records the payment in **Admin**. The kiosk does not collect UPI payments or verify them automatically. If printing fails, Admin shows the error and offers a retry.
+Orders created by the Android-hosted service are stored on that phone and survive app restarts. Token numbers start at **101** and continue across app restarts. Placing an order queues a kitchen bill first, then a separate token slip three seconds later. The customer gives the kitchen bill to the kitchen and keeps the matching token slip for collection. Payment is collected separately at the counter by cash or the shop's PhonePe Business QR; staff records the payment in **Admin**. The kiosk does not collect UPI payments or verify them automatically. Admin shows the last seven days of order counts and paid revenue, and provides separate kitchen-bill and token-slip print retries when needed.
+
+The kiosk uses a bundled, subtle looping food animation by default and repeats it in square menu-item previews. Staff can upload MP4/WebM videos (up to 20 MB) from the in-app panel or use direct HTTPS MP4/WebM URLs. Uploaded videos and menu/theme settings are stored on the phone.
 
 The sample menu and admin PIN are demo values. The local Node.js development server does not have the Android Bluetooth printer and keeps development orders in memory; use the Android app for the persistent, printer-backed counter workflow.
