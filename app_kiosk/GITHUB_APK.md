@@ -7,10 +7,13 @@ are pushed to `app_kiosk/`, and also on a manual workflow run.
 
 - `app_kiosk/public/connect.html` — phone connect page
 - `app_kiosk/public/kiosk.html` — iPad kiosk page
-- `app_kiosk/public/admin.html` — phone admin page
+- `app_kiosk/public/index.html` — in-app admin and server settings
 - `app_kiosk/server/app.js` — backend server
 - `app_kiosk/android` — Capacitor Android project
 - `.github/workflows/android-apk.yml` — GitHub Actions build workflow
+
+Admin controls are available only inside the Android app; no web admin page is
+served to devices on the shared Wi-Fi network.
 
 ## Download the phone-hosted kiosk APK
 

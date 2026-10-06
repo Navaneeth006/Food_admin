@@ -47,6 +47,9 @@ public class KioskHttpServer extends NanoHTTPD {
         String uri = session.getUri();
         Method method = session.getMethod();
 
+        if (uri.startsWith("/api/admin/") && !isInAppAdminRequest(session)) {
+            return json(Response.Status.FORBIDDEN, "{\"error\":\"Admin controls are available in the Food Kiosk app only.\"}");
+        }
         if (Method.OPTIONS.equals(method)) {
             return cors(newFixedLengthResponse(Response.Status.OK, "text/plain; charset=utf-8", ""));
         }
@@ -91,19 +94,6 @@ public class KioskHttpServer extends NanoHTTPD {
         }
         if (Method.POST.equals(method) && "/api/orders".equals(uri)) {
             return createOrder(session);
-        }
-        if (Method.POST.equals(method) && uri.matches("/api/admin/orders/[0-9]+/mark-paid")) {
-            int orderId = Integer.parseInt(uri.split("/")[4]);
-            java.util.List<String> paymentMethods = session.getParameters().get("method");
-            String paymentMethod = paymentMethods == null || paymentMethods.isEmpty() ? "cash" : paymentMethods.get(0);
-            if (!"cash".equalsIgnoreCase(paymentMethod) && !"upi".equalsIgnoreCase(paymentMethod)) {
-                return json(Response.Status.BAD_REQUEST, "{\"error\":\"Payment method must be cash or upi\"}");
-            }
-            try {
-                return markOrderPaid(orderId, paymentMethod);
-            } catch (JSONException exception) {
-                return json(Response.Status.INTERNAL_ERROR, "{\"error\":\"Could not settle order\"}");
-            }
         }
         if (Method.POST.equals(method) && uri.matches("/api/admin/orders/[0-9]+/print")) {
             int orderId = Integer.parseInt(uri.split("/")[4]);
@@ -192,9 +182,6 @@ public class KioskHttpServer extends NanoHTTPD {
             }
             return json(Response.Status.OK, result.toString());
         }
-        if (Method.POST.equals(method) && "/api/admin/login".equals(uri)) {
-            return adminLogin(session);
-        }
         if (Method.GET.equals(method) && "/api/admin/stats".equals(uri)) {
             return adminStats();
         }
@@ -254,7 +241,7 @@ public class KioskHttpServer extends NanoHTTPD {
             order.put("customerName", request.optString("customerName", "Walk-in"));
             order.put("items", items);
             order.put("total", total);
-            order.put("status", "awaiting_payment");
+            order.put("status", "new");
             order.put("paymentStatus", "pending");
             order.put("printStatus", "queued");
             order.put("billPrintStatus", "queued");
@@ -276,21 +263,6 @@ public class KioskHttpServer extends NanoHTTPD {
             return json(Response.Status.OK, result.toString());
         } catch (Exception exception) {
             return json(Response.Status.BAD_REQUEST, "{\"error\":\"Invalid order request\"}");
-        }
-    }
-
-    private Response adminLogin(IHTTPSession session) {
-        try {
-            JSONObject request = readJsonBody(session);
-            if ("1234".equals(request.optString("pin"))) {
-                JSONObject result = new JSONObject();
-                result.put("ok", true);
-                result.put("message", "Admin logged in");
-                return json(Response.Status.OK, result.toString());
-            }
-            return json(Response.Status.UNAUTHORIZED, "{\"ok\":false,\"message\":\"Invalid PIN\"}");
-        } catch (Exception exception) {
-            return json(Response.Status.BAD_REQUEST, "{\"ok\":false,\"message\":\"Invalid request\"}");
         }
     }
 
@@ -318,31 +290,17 @@ public class KioskHttpServer extends NanoHTTPD {
         return json(Response.Status.OK, result.toString());
     }
 
-    private synchronized Response markOrderPaid(int orderId, String paymentMethod) throws JSONException {
-        JSONArray orders = readOrders();
-        for (int i = 0; i < orders.length(); i++) {
-            JSONObject order = orders.optJSONObject(i);
-            if (order == null || order.optInt("id") != orderId) continue;
-            if (!"paid".equals(order.optString("paymentStatus"))) {
-                order.put("paymentStatus", "paid");
-                order.put("paymentMethod", "upi".equalsIgnoreCase(paymentMethod) ? "upi" : "cash");
-                order.put("status", "new");
-                order.put("paidAt", System.currentTimeMillis());
-                persistOrders(orders);
-            }
-            JSONObject result = new JSONObject();
-            result.put("ok", true);
-            result.put("order", order);
-            return json(Response.Status.OK, result.toString());
-        }
-        return json(Response.Status.NOT_FOUND, "{\"error\":\"Order not found\"}");
-    }
-
     private void scheduleOrderPrint(int orderId) {
         printQueue.execute(() -> {
             printSection(orderId, "bill");
             try {
-                TimeUnit.SECONDS.sleep(3);
+                int delay = Math.min(3, Math.max(2,
+                        database.settings().optInt("token_print_delay_seconds", 3)));
+                TimeUnit.SECONDS.sleep(delay);
+            } catch (JSONException exception) {
+                android.util.Log.e("KioskHttpServer", "Could not load token print delay", exception);
+                updatePrintStatus(orderId, "token", "failed", "Token print delay could not be loaded.");
+                return;
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 updatePrintStatus(orderId, "token", "failed", "Token print was interrupted.");
@@ -362,9 +320,10 @@ public class KioskHttpServer extends NanoHTTPD {
             String tokenStatus = order.optString("tokenPrintStatus");
             if ("queued".equals(billStatus)) {
                 scheduleOrderPrint(orderId);
+            } else if ("printed".equals(billStatus) &&
+                    ("waiting".equals(tokenStatus) || "queued".equals(tokenStatus))) {
+                printQueue.execute(() -> printSection(orderId, "token"));
             } else if ("queued".equals(tokenStatus)) {
-                scheduleOrderPrint(orderId);
-            } else if ("printed".equals(billStatus) && "waiting".equals(tokenStatus)) {
                 printQueue.execute(() -> printSection(orderId, "token"));
             }
         }
@@ -443,14 +402,19 @@ public class KioskHttpServer extends NanoHTTPD {
     private byte[] billBytes(JSONObject order) throws JSONException {
         StringBuilder receipt = new StringBuilder();
         int tokenNumber = order.optInt("tokenNumber", order.optInt("id") + 100);
-        String businessName = database.settings().optString("business_name", "FOOD KIOSK");
+        JSONObject settings = database.settings();
+        String businessName = settings.optString("business_name", "FOOD KIOSK");
+        String heading = settings.optString("receipt_bill_heading", "KITCHEN ORDER / CUSTOMER BILL");
+        int scale = Math.min(3, Math.max(1, settings.optInt("receipt_font_scale", 1)));
+        int fontSize = scale == 1 ? 0 : scale == 2 ? 0x11 : 0x22;
         String orderTime = new java.text.SimpleDateFormat(
                 "dd/MM/yyyy hh:mm a",
                 java.util.Locale.getDefault()
         ).format(new java.util.Date(order.optLong("createdAt", System.currentTimeMillis())));
         receipt.append("\u001b@\u001ba\u0001").append(businessName).append('\n')
-                .append("KITCHEN ORDER / CUSTOMER BILL\n")
-                .append("\u001ba\u0000TOKEN #").append(tokenNumber).append('\n')
+                .append("\u001bE\u0001\u001d!").append((char) fontSize).append(heading).append("\u001d!\u0000\u001bE\u0000\n")
+                .append("\u001ba\u0000------------------------------\n")
+                .append("\u001bE\u0001\u001d!\u0011TOKEN #").append(tokenNumber).append("\u001d!\u0000\u001bE\u0000\n")
                 .append(orderTime).append('\n')
                 .append("------------------------------\n");
         JSONArray items = order.optJSONArray("items");
@@ -466,18 +430,25 @@ public class KioskHttpServer extends NanoHTTPD {
         }
         receipt.append("------------------------------\nAMOUNT DUE INR ")
                 .append(String.format(java.util.Locale.US, "%.2f", order.optDouble("total")))
+                .append("\n\u001bE\u0001COLLECT THIS ORDER SUMMARY BILL\u001bE\u0000")
                 .append("\nPAYMENT AT COUNTER\n\n\n\u001dV\u0000");
         return receipt.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
 
     private byte[] tokenBytes(JSONObject order) throws JSONException {
         int tokenNumber = order.optInt("tokenNumber", order.optInt("id") + 100);
-        String businessName = database.settings().optString("business_name", "FOOD KIOSK");
-        String slip = "\u001b@\u001ba\u0001" + businessName + "\nCUSTOMER TOKEN\n" +
+        JSONObject settings = database.settings();
+        String businessName = settings.optString("business_name", "FOOD KIOSK");
+        String heading = settings.optString("receipt_token_heading", "CUSTOMER TOKEN");
+        String instruction = settings.optString("receipt_token_instruction", "Keep this token for collection.");
+        int scale = Math.min(3, Math.max(1, settings.optInt("receipt_font_scale", 1)));
+        int fontSize = scale == 1 ? 0 : scale == 2 ? 0x11 : 0x22;
+        String slip = "\u001b@\u001ba\u0001" + businessName + "\n" +
+                "\u001bE\u0001" + heading + "\u001bE\u0000\n" +
                 "\u001ba\u0000------------------------------\n" +
-                "\u001ba\u0001TOKEN #" + tokenNumber + "\n" +
+                "\u001ba\u0001\u001bE\u0001\u001d!" + (char) fontSize + "TOKEN #" + tokenNumber + "\u001d!\u0000\u001bE\u0000\n" +
                 "\u001ba\u0000------------------------------\n" +
-                "Keep this token for collection.\n\n\n\u001dV\u0000";
+                "\u001bE\u0001" + instruction + "\u001bE\u0000\n\n\n\u001dV\u0000";
         return slip.getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
 
@@ -528,18 +499,25 @@ public class KioskHttpServer extends NanoHTTPD {
                 return json(Response.Status.BAD_REQUEST, "{\"error\":\"Choose a video file to upload.\"}");
             }
             String fileName = fileNames.get(0).toLowerCase(java.util.Locale.ROOT);
-            if (!fileName.endsWith(".mp4") && !fileName.endsWith(".webm")) {
-                return json(Response.Status.BAD_REQUEST, "{\"error\":\"Upload an MP4 or WebM video.\"}");
+            List<String> kinds = session.getParameters().get("kind");
+            boolean promo = kinds != null && !kinds.isEmpty() && "promo".equals(kinds.get(0));
+            boolean video = fileName.endsWith(".mp4") || fileName.endsWith(".webm");
+            boolean image = fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") ||
+                    fileName.endsWith(".png") || fileName.endsWith(".webp");
+            if (!video && !(promo && image)) {
+                return json(Response.Status.BAD_REQUEST, promo
+                        ? "{\"error\":\"Upload MP4, WebM, JPG, PNG, or WebP media.\"}"
+                        : "{\"error\":\"Upload an MP4 or WebM video.\"}");
             }
             File temporary = new File(temporaryPath);
             if (!temporary.isFile() || temporary.length() == 0 || temporary.length() > 20L * 1024 * 1024) {
-                return json(Response.Status.BAD_REQUEST, "{\"error\":\"Video must be between 1 byte and 20 MB.\"}");
+                return json(Response.Status.BAD_REQUEST, "{\"error\":\"Media must be between 1 byte and 20 MB.\"}");
             }
             File folder = new File(context.getFilesDir(), "kiosk-media");
             if (!folder.exists() && !folder.mkdirs()) {
                 return json(Response.Status.INTERNAL_ERROR, "{\"error\":\"Could not prepare video storage.\"}");
             }
-            String extension = fileName.endsWith(".webm") ? ".webm" : ".mp4";
+            String extension = fileName.substring(fileName.lastIndexOf('.'));
             File destination = new File(folder, UUID.randomUUID() + extension);
             try (FileInputStream input = new FileInputStream(temporary);
                  FileOutputStream output = new FileOutputStream(destination)) {
@@ -550,8 +528,8 @@ public class KioskHttpServer extends NanoHTTPD {
             String path = "/media/" + destination.getName();
             return json(Response.Status.OK, "{\"url\":\"" + path + "\"}");
         } catch (Exception exception) {
-            android.util.Log.e("KioskHttpServer", "Video upload failed", exception);
-            return json(Response.Status.BAD_REQUEST, "{\"error\":\"Video upload failed. Use a valid MP4 or WebM file under 20 MB.\"}");
+            android.util.Log.e("KioskHttpServer", "Media upload failed", exception);
+            return json(Response.Status.BAD_REQUEST, "{\"error\":\"Media upload failed. Check the file format and 20 MB size limit.\"}");
         }
     }
 
@@ -563,7 +541,11 @@ public class KioskHttpServer extends NanoHTTPD {
         File file = new File(new File(context.getFilesDir(), "kiosk-media"), fileName);
         if (!file.isFile()) return text(Response.Status.NOT_FOUND, "Video not found");
         try {
-            String mime = fileName.endsWith(".webm") ? "video/webm" : "video/mp4";
+            String mime = fileName.endsWith(".webm") ? "video/webm"
+                    : fileName.endsWith(".png") ? "image/png"
+                    : fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") ? "image/jpeg"
+                    : fileName.endsWith(".webp") ? "image/webp"
+                    : "video/mp4";
             return cors(newFixedLengthResponse(Response.Status.OK, mime, new FileInputStream(file), file.length()));
         } catch (IOException exception) {
             android.util.Log.e("KioskHttpServer", "Could not serve video", exception);
@@ -623,6 +605,9 @@ public class KioskHttpServer extends NanoHTTPD {
     }
 
     private Response serveAsset(String uri) {
+        if ("/admin.html".equals(uri) || "/index.html".equals(uri)) {
+            return text(Response.Status.NOT_FOUND, "This page is available in the Food Kiosk app only.");
+        }
         String assetPath = "/".equals(uri) ? "connect.html" : uri.substring(1);
         if (assetPath.contains("..") || assetPath.isEmpty()) {
             return text(Response.Status.BAD_REQUEST, "Invalid path");
@@ -645,6 +630,11 @@ public class KioskHttpServer extends NanoHTTPD {
         } catch (IOException exception) {
             return text(Response.Status.NOT_FOUND, "File not found");
         }
+    }
+
+    private boolean isInAppAdminRequest(IHTTPSession session) {
+        String origin = session.getHeaders().get("origin");
+        return "https://localhost".equals(origin);
     }
 
     private Response json(Response.IStatus status, String body) {

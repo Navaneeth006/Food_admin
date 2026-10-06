@@ -47,13 +47,17 @@
     .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; align-items: start; gap: 28px; }
     .catalog-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
     .catalog-title { margin: 0; font-size: 21px; letter-spacing: -.02em; }
-    .search { width: min(270px, 48%); height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; outline: none; background: white; color: var(--ink); }
-    .search:focus { border-color: #c67c5f; box-shadow: 0 0 0 3px rgba(182, 79, 44, .1); }
     .filters { display: flex; gap: 8px; margin: 0 0 24px; overflow-x: auto; scrollbar-width: none; }
     .filters::-webkit-scrollbar { display: none; }
     .filter { flex: 0 0 auto; padding: 8px 15px; border: 1px solid var(--line); border-radius: 999px; background: white; color: #5e6259; font-size: 13px; font-weight: 700; }
     .filter.active { border-color: var(--ink); background: var(--ink); color: white; }
     .menu-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .featured-panel { margin: 0 0 26px; padding: 17px; border: 1px solid #eaded6; border-radius: 16px; background: color-mix(in srgb, var(--paper) 94%, var(--accent) 6%); box-shadow: var(--shadow); }
+    .featured-heading { display: flex; align-items: center; gap: 9px; margin: 0 0 13px; font-size: 16px; font-weight: 850; }
+    .featured-heading::before { content: "★"; color: var(--accent); }
+    .featured-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .featured-grid .item { padding: 9px; }
+    .featured-grid .item-media { aspect-ratio: 1.35; }
     .item { display: flex; min-height: 0; flex-direction: column; padding: 12px; border: 1px solid var(--line); border-radius: 15px; background: var(--paper); box-shadow: 0 3px 12px rgba(39, 43, 33, .025); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
     .item:hover { transform: translateY(-2px); border-color: #d5cfc5; box-shadow: var(--shadow); }
     .item-media { width: 100%; aspect-ratio: 1; overflow: hidden; border-radius: 11px; background: linear-gradient(135deg, #f5e7d7, #eee9dc); }
@@ -65,6 +69,12 @@
     .add-button { min-height: 37px; padding: 0 13px; border: 1px solid #e6cfc3; border-radius: 9px; background: #fffaf7; color: var(--accent-dark); font-size: 13px; font-weight: 750; }
     .add-button:hover { background: var(--accent-soft); }
     .order-card { position: sticky; top: 20px; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); box-shadow: var(--shadow); }
+    .order-column { position: sticky; top: 20px; display: grid; gap: 15px; align-self: start; }
+    .order-column .order-card { position: static; }
+    .promo-card { overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); box-shadow: var(--shadow); }
+    .promo-heading { margin: 0; padding: 13px 17px 10px; font-size: 14px; font-weight: 800; }
+    .promo-media { width: 100%; aspect-ratio: 1.35; overflow: hidden; background: linear-gradient(135deg, #f5e7d7, #eee9dc); }
+    .promo-media img, .promo-media video { display: block; width: 100%; height: 100%; object-fit: cover; }
     .order-heading { padding: 21px 21px 16px; border-bottom: 1px solid var(--line); }
     .order-heading h2 { margin: 0; font-size: 19px; letter-spacing: -.025em; }
     .order-heading p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
@@ -98,6 +108,8 @@
     .token-ticket { padding: 17px; border: 1px dashed #d6c9be; border-radius: 12px; background: #fcfaf7; }
     .token-label { color: var(--muted); font-size: 11px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
     .token-value { margin: 2px 0; color: var(--accent-dark); font-size: 38px; font-weight: 850; letter-spacing: -.04em; }
+    .collect-bill { margin: 11px 0 0; padding: 9px 11px; border: 1px solid #d6a487; border-radius: 9px; background: #fff0e5; color: #733719; font-size: 14px; font-weight: 900; letter-spacing: .04em; }
+    .token-countdown { margin: 8px 0 0; padding: 8px 10px; border-radius: 8px; background: var(--accent-soft); color: var(--accent-dark); font-size: 14px; font-weight: 900; }
     .due-value { font-size: 15px; font-weight: 750; }
     .print-message { margin: 15px 0 0; color: var(--green); font-size: 12px; }
     .print-message.failed { color: #a64032; }
@@ -106,11 +118,13 @@
     .confirm-actions .primary { border-color: var(--accent); background: var(--accent); color: white; }
     body[data-theme="dark"], body[data-theme="neon"] { --ink:#f3f3ee; --muted:#aeb2a9; --line:#373b3d; --paper:rgba(29,32,35,.94); --canvas:#191b1f; --accent-dark:#ffb195; --accent-soft:#3c2c28; --shadow:0 14px 40px rgba(0,0,0,.3); }
     body[data-theme="dark"] .ambient-wash, body[data-theme="neon"] .ambient-wash { background:rgba(21,23,26,.55); }
-    body[data-theme="dark"] .filter, body[data-theme="dark"] .search, body[data-theme="dark"] .qty-control button,
+    body[data-theme="dark"] .filter, body[data-theme="dark"] .qty-control button,
     body[data-theme="dark"] .confirm-actions button { background-color:var(--paper); color:var(--ink); }
     body[data-theme="dark"] .item, body[data-theme="dark"] .order-card, body[data-theme="dark"] .confirmation,
+    body[data-theme="dark"] .featured-panel, body[data-theme="dark"] .promo-card,
     body[data-theme="dark"] .token-ticket, body[data-theme="dark"] .cart-lines, body[data-theme="dark"] .order-summary,
     body[data-theme="neon"] .item, body[data-theme="neon"] .order-card, body[data-theme="neon"] .confirmation,
+    body[data-theme="neon"] .featured-panel, body[data-theme="neon"] .promo-card,
     body[data-theme="neon"] .token-ticket, body[data-theme="neon"] .cart-lines, body[data-theme="neon"] .order-summary { background-color:var(--paper); color:var(--ink); }
     body[data-theme="dark"] .filter.active, body[data-theme="neon"] .filter.active { background:var(--accent); border-color:var(--accent); color:#fff; }
     body[data-theme="dark"] .item-description, body[data-theme="dark"] .cart-unit, body[data-theme="dark"] .order-heading p { color:var(--muted); }
@@ -130,14 +144,14 @@
       .service-note { display: inline-flex; margin-top: 15px; }
       .layout { display: block; }
       .catalog-head { align-items: flex-start; flex-direction: column; }
-      .search { width: 100%; }
       .menu-grid { gap: 11px; }
+      .featured-grid { gap: 9px; }
       .item { min-height: 200px; padding: 13px; }
       .item h3 { font-size: 14px; }
       .item-description { font-size: 11px; }
       .item-bottom { margin-top: 10px; }
       .add-button { padding: 0 9px; }
-      .order-card { position: static; margin-top: 24px; }
+      .order-column { position: static; margin-top: 24px; }
       .mobile-cart { position: fixed; z-index: 2; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 13px 18px calc(13px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: rgba(255, 255, 255, .96); box-shadow: 0 -8px 24px rgba(39, 43, 33, .07); backdrop-filter: blur(12px); }
       .mobile-cart[hidden] { display: none; }
       .mobile-cart-copy { display: grid; line-height: 1.35; }
@@ -185,26 +199,38 @@
       <section aria-labelledby="menu-heading">
         <div class="catalog-head">
           <h2 class="catalog-title" id="menu-heading">The menu</h2>
-          <input class="search" id="search" type="search" placeholder="Find something tasty" aria-label="Search menu">
         </div>
+        <section class="featured-panel" id="featured-panel" aria-labelledby="featured-title" hidden>
+          <h3 class="featured-heading" id="featured-title">Most popular</h3>
+          <div class="featured-grid" id="featured-grid"></div>
+        </section>
         <nav class="filters" id="filters" aria-label="Menu categories"></nav>
         <div class="menu-grid" id="menu" aria-live="polite">
           <div class="empty-menu">Loading today’s menu…</div>
         </div>
       </section>
 
-      <aside class="order-card" id="your-order" aria-labelledby="order-heading">
-        <div class="order-heading">
-          <h2 id="order-heading">Your order <span id="item-count" style="color:#92958c;font-size:13px;font-weight:600"></span></h2>
-          <p>Review everything before sending it to the kitchen.</p>
-        </div>
-        <div class="cart-lines" id="cart"></div>
-        <div class="order-summary">
-          <div class="summary-row"><span>Items</span><span id="subtotal">₹0</span></div>
-          <div class="summary-total"><span>Total due</span><span id="total">₹0</span></div>
-          <button class="submit-button" id="place-order" type="button" disabled>Confirm order</button>
-          <p class="counter-note">Confirm your items to print a kitchen bill and a separate token slip.</p>
-        </div>
+      <aside class="order-column">
+        <section class="order-card" id="your-order" aria-labelledby="order-heading">
+          <div class="order-heading">
+            <h2 id="order-heading">Your order <span id="item-count" style="color:#92958c;font-size:13px;font-weight:600"></span></h2>
+            <p>Review everything before sending it to the kitchen.</p>
+          </div>
+          <div class="cart-lines" id="cart"></div>
+          <div class="order-summary">
+            <div class="summary-row"><span>Items</span><span id="subtotal">₹0</span></div>
+            <div class="summary-total"><span>Total due</span><span id="total">₹0</span></div>
+            <button class="submit-button" id="place-order" type="button" disabled>Confirm order</button>
+            <p class="counter-note">Confirm your order to print the kitchen bill and token slip. Payment is collected at the counter.</p>
+          </div>
+        </section>
+        <section class="promo-card" aria-label="Food promotion">
+          <h2 class="promo-heading">A little more delicious</h2>
+          <div class="promo-media">
+            <img id="promo-image" alt="Food promotion" hidden>
+            <video id="promo-video" autoplay muted loop playsinline preload="metadata" hidden></video>
+          </div>
+        </section>
       </aside>
     </div>
   </main>
@@ -218,12 +244,14 @@
     <section class="confirmation" role="dialog" aria-modal="true" aria-labelledby="confirm-heading">
       <div class="confirm-icon" aria-hidden="true">✓</div>
       <h2 id="confirm-heading">Your order is confirmed</h2>
-      <p class="confirmation-copy">Wait for both slips. Give the kitchen bill to the kitchen and keep your token slip for collection.</p>
+      <p class="confirmation-copy">Two slips print automatically. Give the order summary to the kitchen and keep your token for collection.</p>
       <div class="token-ticket">
-        <div class="token-label">Your kitchen token</div>
+        <div class="token-label" id="token-heading">Your collection token</div>
         <div class="token-value" id="token-number">—</div>
         <div class="due-value">Amount due <span id="confirmation-total">₹0</span></div>
       </div>
+      <div class="collect-bill">COLLECT THE ORDER SUMMARY BILL</div>
+      <div class="token-countdown" id="token-countdown" aria-live="polite">TOKEN SLIP PRINTS IN 3 SECONDS</div>
       <p class="print-message" id="print-message" aria-live="polite"></p>
       <div class="confirm-actions">
         <button id="close-confirmation" type="button">Done</button>
@@ -235,7 +263,7 @@
   <script>
     (() => {
       'use strict';
-      const state = { menu: [], cart: new Map(), category: 'All', submitting: false, printPoll: 0, backgroundVideo: '/media/food-atmosphere.mp4' };
+      const state = { menu: [], cart: new Map(), category: 'All', submitting: false, printPoll: 0, countdownTimer: 0, backgroundVideo: '/media/food-atmosphere.mp4', tokenPrintDelay: 3 };
       const $ = (selector) => document.querySelector(selector);
       const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
       const formatMoney = (amount) => currency.format(Number(amount) || 0);
@@ -253,14 +281,17 @@
           state.menu = data.menu;
           const business = data.business || {};
           if (business.name) $('#business-name').textContent = business.name;
+          $('#token-heading').textContent = business.receipt_token_heading || 'Your collection token';
           state.backgroundVideo = business.kiosk_background_video || state.backgroundVideo;
+          state.tokenPrintDelay = Math.min(3, Math.max(2, Number(business.token_print_delay_seconds) || 3));
+          $('#featured-title').textContent = business.kiosk_featured_label || 'Most popular';
           applyAppearance(business);
-          const ambientVideo = $('#ambient-video');
-          ambientVideo.src = state.backgroundVideo;
-          ambientVideo.onerror = () => { ambientVideo.hidden = true; };
+          loadLoopingVideo($('#ambient-video'), state.backgroundVideo, true);
+          loadPromoMedia(business.kiosk_promo_media || state.backgroundVideo);
           $('#connection-label').textContent = 'Open';
           connection.classList.remove('offline');
           renderFilters();
+          renderFeatured();
           renderMenu();
           renderCart();
         } catch (error) {
@@ -289,29 +320,82 @@
           </button>`).join('');
       }
 
+      function itemCard(item, featured = false) {
+        const inCart = state.cart.get(item.id)?.qty || 0;
+        return `
+          <article class="item${featured ? ' featured-item' : ''}">
+            <div class="item-media">
+              <video autoplay muted loop playsinline preload="metadata" src="${esc(item.videoUrl || state.backgroundVideo)}" aria-label="${esc(item.name)} food animation"></video>
+            </div>
+            <h3>${esc(item.name)}</h3>
+            ${item.description ? `<p class="item-description">${esc(item.description)}</p>` : '<p class="item-description">Prepared fresh when you order.</p>'}
+            <div class="item-bottom">
+              <span class="item-price">${formatMoney(item.price)}</span>
+              <button class="add-button" type="button" data-add="${Number(item.id)}">${inCart ? `Add more · ${inCart}` : '＋ Add'}</button>
+            </div>
+          </article>`;
+      }
+
+      function loadLoopingVideo(video, url, fallbackToDefault = false) {
+        video.autoplay = true;
+        video.muted = true;
+        video.loop = true;
+        video.playsInline = true;
+        video.src = url;
+        video.hidden = false;
+        video.onerror = () => {
+          if (fallbackToDefault && url !== '/media/food-atmosphere.mp4') {
+            loadLoopingVideo(video, '/media/food-atmosphere.mp4');
+          } else {
+            video.hidden = true;
+          }
+        };
+        video.load();
+        const playback = video.play();
+        if (playback?.catch) playback.catch(() => {});
+      }
+
+      function loadPromoMedia(url) {
+        const image = $('#promo-image');
+        const video = $('#promo-video');
+        const isImage = /\.(png|jpe?g|webp)(?:[?#]|$)/i.test(url);
+        image.hidden = !isImage;
+        video.hidden = isImage;
+        if (isImage) {
+          image.onerror = () => { image.hidden = true; };
+          image.src = url;
+        } else {
+          loadLoopingVideo(video, url);
+        }
+      }
+
+      function renderFeatured() {
+        const featured = state.menu.filter((item) => item.featured).slice(0, 4);
+        $('#featured-panel').hidden = featured.length === 0;
+        $('#featured-grid').innerHTML = featured.map((item) => itemCard(item, true)).join('');
+        startMenuVideos($('#featured-grid'));
+      }
+
+      function startMenuVideos(container) {
+        container.querySelectorAll('.item-media video').forEach((video) => {
+          video.onerror = () => {
+            if (video.src !== new URL(state.backgroundVideo, location.href).href) {
+              loadLoopingVideo(video, state.backgroundVideo);
+            } else {
+              video.hidden = true;
+            }
+          };
+          const playback = video.play();
+          if (playback?.catch) playback.catch(() => {});
+        });
+      }
+
       function renderMenu() {
-        const query = $('#search').value.trim().toLowerCase();
         const visible = state.menu.filter((item) =>
-          (state.category === 'All' || item.category === state.category)
-          && `${item.name} ${item.description || ''}`.toLowerCase().includes(query)
+          state.category === 'All' || item.category === state.category
         );
-        $('#menu').innerHTML = visible.length ? visible.map((item) => {
-          const inCart = state.cart.get(item.id)?.qty || 0;
-          return `
-            <article class="item">
-              <div class="item-media">
-                <video autoplay muted loop playsinline preload="metadata" aria-label="${esc(item.name)} food animation">
-                  <source src="${esc(item.videoUrl || state.backgroundVideo)}">
-                </video>
-              </div>
-              <h3>${esc(item.name)}</h3>
-              ${item.description ? `<p class="item-description">${esc(item.description)}</p>` : '<p class="item-description">Prepared fresh when you order.</p>'}
-              <div class="item-bottom">
-                <span class="item-price">${formatMoney(item.price)}</span>
-                <button class="add-button" type="button" data-add="${Number(item.id)}">${inCart ? `Add more · ${inCart}` : '＋ Add'}</button>
-              </div>
-            </article>`;
-        }).join('') : '<div class="empty-menu">No items match your search. Try another name or category.</div>';
+        $('#menu').innerHTML = visible.length ? visible.map((item) => itemCard(item)).join('') : '<div class="empty-menu">No items in this category right now.</div>';
+        startMenuVideos($('#menu'));
       }
 
       function addItem(id) {
@@ -320,6 +404,7 @@
         const current = state.cart.get(id);
         state.cart.set(id, { ...item, qty: (current?.qty || 0) + 1 });
         renderMenu();
+        renderFeatured();
         renderCart();
       }
 
@@ -330,6 +415,7 @@
         if (qty <= 0) state.cart.delete(id);
         else state.cart.set(id, { ...entry, qty });
         renderMenu();
+        renderFeatured();
         renderCart();
       }
 
@@ -385,13 +471,16 @@
           const order = result.order;
           $('#token-number').textContent = `#${order.tokenNumber || order.id + 100}`;
           $('#confirmation-total').textContent = formatMoney(order.total);
+          state.countdownStarted = false;
+          $('#token-countdown').textContent = 'TOKEN PRINTS AFTER THE ORDER SUMMARY';
           const printMessage = $('#print-message');
-          printMessage.textContent = 'Printing the kitchen bill first. Your token slip follows in 3 seconds…';
+          printMessage.textContent = 'Order summary is printing now. Your token slip follows shortly.';
           printMessage.classList.remove('failed');
           state.cart.clear();
           $('#message').hidden = true;
           renderCart();
           renderMenu();
+          renderFeatured();
           $('#confirmation').hidden = false;
           $('#new-order').focus();
           if (Number(order.id)) pollPrintStatus(Number(order.id));
@@ -404,6 +493,24 @@
         }
       }
 
+      function startTokenCountdown(seconds) {
+        window.clearInterval(state.countdownTimer);
+        let remaining = seconds;
+        const countdown = $('#token-countdown');
+        if (remaining <= 0) {
+          countdown.textContent = 'TOKEN SLIP IS PRINTING — PLEASE COLLECT IT';
+          return;
+        }
+        countdown.textContent = `TOKEN SLIP PRINTS IN ${remaining} SECOND${remaining === 1 ? '' : 'S'}`;
+        state.countdownTimer = window.setInterval(() => {
+          remaining -= 1;
+          countdown.textContent = remaining > 0
+            ? `TOKEN SLIP PRINTS IN ${remaining} SECOND${remaining === 1 ? '' : 'S'}`
+            : 'TOKEN SLIP IS PRINTING — PLEASE COLLECT IT';
+          if (remaining <= 0) window.clearInterval(state.countdownTimer);
+        }, 1000);
+      }
+
       async function pollPrintStatus(orderId) {
         window.clearTimeout(state.printPoll);
         try {
@@ -412,22 +519,32 @@
           const status = await response.json();
           const message = $('#print-message');
           if (status.billPrintStatus === 'failed' || status.tokenPrintStatus === 'failed') {
+            $('#token-countdown').textContent = 'PLEASE COLLECT YOUR TOKEN AT THE COUNTER';
             message.textContent = 'A slip could not print. Show your token at the counter and ask staff to retry.';
             message.classList.add('failed');
             return;
           }
           if (status.billPrintStatus === 'not-configured' || status.tokenPrintStatus === 'not-configured') {
+            $('#token-countdown').textContent = 'PLEASE COLLECT YOUR TOKEN AT THE COUNTER';
             message.textContent = 'No printer is configured. Show your token to staff and ask for both slips.';
             message.classList.add('failed');
             return;
           }
           if (status.billPrintStatus === 'printed' && status.tokenPrintStatus === 'printed') {
+            if (!state.countdownStarted) {
+              state.countdownStarted = true;
+              startTokenCountdown(0);
+            }
             message.textContent = 'Both slips are ready. Give the bill to the kitchen and keep your token slip.';
             message.classList.remove('failed');
             return;
           }
           if (status.billPrintStatus === 'printed') {
-            message.textContent = 'Kitchen bill printed. Your token slip will print in 3 seconds…';
+            if (!state.countdownStarted) {
+              state.countdownStarted = true;
+              startTokenCountdown(state.tokenPrintDelay);
+            }
+            message.textContent = `Kitchen bill printed. Your token slip will print in ${state.tokenPrintDelay} seconds…`;
           }
           state.printPoll = window.setTimeout(() => pollPrintStatus(orderId), 1000);
         } catch {
@@ -450,16 +567,15 @@
         const button = event.target.closest('[data-change]');
         if (button) changeQuantity(Number(button.dataset.change), Number(button.dataset.delta));
       });
-      $('#search').addEventListener('input', renderMenu);
       $('#place-order').textContent = 'Confirm order';
       $('#place-order').addEventListener('click', placeOrder);
       $('#review-order').addEventListener('click', () => $('#your-order').scrollIntoView({ behavior: 'smooth', block: 'center' }));
       $('#close-confirmation').addEventListener('click', () => { $('#confirmation').hidden = true; });
       $('#new-order').addEventListener('click', () => {
         window.clearTimeout(state.printPoll);
+        window.clearInterval(state.countdownTimer);
         $('#confirmation').hidden = true;
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        $('#search').focus({ preventScroll: true });
       });
       $('#confirmation').addEventListener('click', (event) => {
         if (event.target === $('#confirmation')) $('#confirmation').hidden = true;

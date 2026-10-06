@@ -22,7 +22,7 @@
     .actions { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:24px; }
     .link { display:inline-flex; min-height:45px; align-items:center; justify-content:center; padding:0 17px; border:1px solid var(--accent); border-radius:9px; background:var(--accent); color:white; font-size:13px; font-weight:750; text-decoration:none; }
     .link.secondary { border-color:var(--line); background:white; color:var(--ink); }
-    .address-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .address-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; }
     .address-card { padding:15px; border:1px solid var(--line); border-radius:11px; background:#fcfcfa; }
     .address-label { margin-bottom:7px; color:var(--muted); font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
     .address { overflow-wrap:anywhere; color:#34382f; font:13px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace; }
@@ -41,29 +41,25 @@
     <p class="lead">This phone hosts the menu and order board. Keep it connected to the same Wi-Fi as your iPad and printer.</p>
     <section class="panel">
       <h2>Open your workspace</h2>
-      <p class="panel-lead">Share the kiosk address with customers and keep the counter dashboard on your phone.</p>
+      <p class="panel-lead">Share the customer kiosk address. Menu and receipt administration is available inside this phone app only.</p>
       <div class="actions">
         <a id="kioskLink" class="link" href="/kiosk.html">Open customer kiosk</a>
-        <a id="adminLink" class="link secondary" href="/admin.html">Open counter dashboard</a>
       </div>
       <div class="address-grid">
         <div class="address-card"><div class="address-label">iPad kiosk address</div><div class="address" id="ipadUrl">Finding server address…</div></div>
-        <div class="address-card"><div class="address-label">Counter dashboard</div><div class="address" id="adminUrl">Finding server address…</div></div>
       </div>
     </section>
     <section class="steps" aria-label="Setup steps">
       <article class="step"><span class="step-number">01 · CONNECT</span><p>Join the iPad and printer phone to the same Wi-Fi.</p></article>
       <article class="step"><span class="step-number">02 · TAKE ORDERS</span><p>Customers choose items and receive a printed token bill.</p></article>
-      <article class="step"><span class="step-number">03 · AT THE COUNTER</span><p>Collect cash or PhonePe QR and record payment in Admin.</p></article>
+      <article class="step"><span class="step-number">03 · AT THE COUNTER</span><p>Collect cash or PhonePe QR separately; the kiosk does not record payment.</p></article>
     </section>
   </main>
   <script>
     const host = location.hostname || 'localhost';
     const base = `${location.protocol}//${host}:${location.port || '4242'}`;
     document.getElementById('kioskLink').href = `${base}/kiosk.html`;
-    document.getElementById('adminLink').href = `${base}/admin.html`;
     document.getElementById('ipadUrl').textContent = `${base}/kiosk.html`;
-    document.getElementById('adminUrl').textContent = `${base}/admin.html`;
   </script>
 </body>
 </html>

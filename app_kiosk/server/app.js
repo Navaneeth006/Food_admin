@@ -11,12 +11,19 @@ const PORT = 4242;
 const HOST = '0.0.0.0';
 
 app.use(express.json());
+app.use('/api/admin', (req, res, next) => {
+  if (req.get('origin') !== 'https://localhost') {
+    res.status(403).json({ error: 'Admin controls are available in the Food Kiosk app only.' });
+    return;
+  }
+  next();
+});
 
 const menu = [
-  { id: 1, name: 'Burger', price: 120, category: 'Main' },
-  { id: 2, name: 'Fries', price: 80, category: 'Sides' },
-  { id: 3, name: 'Cold Coffee', price: 90, category: 'Drinks' },
-  { id: 4, name: 'Pizza Slice', price: 150, category: 'Main' }
+  { id: 1, name: 'Burger', price: 120, category: 'Main', featured: true },
+  { id: 2, name: 'Fries', price: 80, category: 'Sides', featured: true },
+  { id: 3, name: 'Cold Coffee', price: 90, category: 'Drinks', featured: true },
+  { id: 4, name: 'Pizza Slice', price: 150, category: 'Main', featured: true }
 ];
 
 const orders = [];
@@ -59,7 +66,7 @@ app.post('/api/orders', (req, res) => {
     customerName: customerName || 'Walk-in',
     items,
     total,
-    status: 'awaiting_payment',
+    status: 'new',
     paymentStatus: 'pending',
     paymentMethod: null,
     printStatus: 'not-configured',
@@ -88,41 +95,12 @@ app.get('/api/orders/:id/status', (req, res) => {
   });
 });
 
-app.post('/api/admin/orders/:id/mark-paid', (req, res) => {
-  const order = orders.find((item) => item.id === Number(req.params.id));
-  if (!order) {
-    res.status(404).json({ error: 'Order not found' });
-    return;
-  }
-  if (!['cash', 'upi'].includes(req.query.method)) {
-    res.status(400).json({ error: 'Payment method must be cash or upi' });
-    return;
-  }
-  if (order.paymentStatus !== 'paid') {
-    order.paymentStatus = 'paid';
-    order.paymentMethod = req.query.method;
-    order.status = 'new';
-    order.paidAt = Date.now();
-  }
-  res.json({ ok: true, order });
-});
-
 app.get('/api/orders', (req, res) => {
   res.json({ orders });
 });
 
 app.get('/api/admin/orders', (req, res) => {
   res.json({ orders: orders.slice().reverse() });
-});
-
-app.post('/api/admin/login', (req, res) => {
-  const { pin } = req.body || {};
-  if (pin === '1234') {
-    res.json({ ok: true, message: 'Admin logged in' });
-    return;
-  }
-
-  res.status(401).json({ ok: false, message: 'Invalid PIN' });
 });
 
 app.get('/api/admin/stats', (req, res) => {
@@ -154,7 +132,11 @@ app.get('/api/admin/stats', (req, res) => {
   });
 });
 
-app.use(express.static(publicDir));
+app.get(['/admin.html', '/index.html'], (_req, res) => {
+  res.status(404).send('Admin controls are available in the Food Kiosk app only.');
+});
+
+app.use(express.static(publicDir, { index: false }));
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(publicDir, 'connect.html'));
@@ -164,13 +146,8 @@ app.get('/kiosk.html', (req, res) => {
   res.sendFile(path.join(publicDir, 'kiosk.html'));
 });
 
-app.get('/admin.html', (req, res) => {
-  res.sendFile(path.join(publicDir, 'admin.html'));
-});
-
 app.listen(PORT, HOST, () => {
   console.log(`Phone server running at http://localhost:${PORT}`);
   console.log(`Connect page: http://<phone-ip>:${PORT}/`);
   console.log(`iPad kiosk URL: http://<phone-ip>:${PORT}/kiosk.html`);
-  console.log(`Admin URL: http://<phone-ip>:${PORT}/admin.html`);
 });

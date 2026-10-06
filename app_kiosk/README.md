@@ -1,6 +1,6 @@
 # App Kiosk
 
-The Android app hosts the kiosk on the phone. It includes a foreground HTTP service, an in-app server control screen, customer kiosk and admin pages, and an API for menu/orders.
+The Android app hosts the kiosk on the phone. It includes a foreground HTTP service, an in-app admin/settings screen, a customer kiosk, and an API for menu/orders.
 
 ## Install the Android app
 
@@ -12,9 +12,9 @@ Download the `app-kiosk-debug-apk` artifact from the successful GitHub Actions r
 2. Turn **Phone server** on. It starts on port `4242` and shows an ongoing notification while active.
 3. Connect the iPad to the same Wi-Fi network as the phone.
 4. Open the **iPad URL** shown in the app on the iPad. It looks like `http://PHONE-IP:4242/kiosk.html`.
-5. Use **Open admin** on the phone to open the admin page. The demo PIN is `1234`.
+5. Use the **Kiosk appearance & menu** controls inside the phone app to administer the menu and kiosk. There is no separate web admin page or admin PIN.
 
-The notification has a **Stop server** action. Turning the server off in the app or notification also disables automatic restart. The in-app **Kiosk appearance & menu** panel lets staff change the kiosk theme/accent, background video, item videos, prices, availability, and display order while the phone server is running.
+The notification has a **Stop server** action. Turning the server off in the app or notification also disables automatic restart. The in-app admin controls let staff add, edit, and remove menu items, choose up to four featured items, set the kiosk theme, configure looping background and cart promo media, and customize bill/token headings, message, print delay, and text size. Changes are stored on the phone and become available to the kiosk immediately.
 
 ## Background and restart behavior
 
@@ -36,8 +36,8 @@ Then open `http://localhost:4242/` on the computer, or use the computer's LAN IP
 
 ## Current scope
 
-Orders created by the Android-hosted service are stored on that phone and survive app restarts. Token numbers start at **101** and continue across app restarts. Placing an order queues a kitchen bill first, then a separate token slip three seconds later. The customer gives the kitchen bill to the kitchen and keeps the matching token slip for collection. Payment is collected separately at the counter by cash or the shop's PhonePe Business QR; staff records the payment in **Admin**. The kiosk does not collect UPI payments or verify them automatically. Admin shows the last seven days of order counts and paid revenue, and provides separate kitchen-bill and token-slip print retries when needed.
+Orders created by the Android-hosted service are stored on that phone and survive app restarts. Token numbers start at **101** and continue across app restarts. Confirming an order queues its itemized kitchen/order-summary bill, then prints the separate token slip after the configurable 2–3 second delay. The customer gives the bold, highlighted order-summary bill to the kitchen and keeps the matching bold token for collection; the kiosk shows a countdown while the token slip is queued. Payment is collected separately at the counter by cash or PhonePe QR; the kiosk does not collect or record payment.
 
-The kiosk uses a bundled, subtle looping food animation by default and repeats it in square menu-item previews. Staff can upload MP4/WebM videos (up to 20 MB) from the in-app panel or use direct HTTPS MP4/WebM URLs. Uploaded videos and menu/theme settings are stored on the phone.
+The kiosk uses a bundled, subtle looping food animation by default and repeats it in menu-item previews. A separate promo panel below the cart supports looping video or image. Staff can upload MP4/WebM videos and JPG/PNG/WebP images (up to 20 MB) from the in-app panel or use direct HTTPS media URLs. Uploaded media and menu/theme/receipt settings are stored on the phone.
 
-The sample menu and admin PIN are demo values. The local Node.js development server does not have the Android Bluetooth printer and keeps development orders in memory; use the Android app for the persistent, printer-backed counter workflow.
+The sample menu is demo data, with four items initially selected for the featured panel. The local Node.js development server does not have the Android Bluetooth printer and keeps development orders in memory; use the Android app for the persistent, printer-backed counter workflow.

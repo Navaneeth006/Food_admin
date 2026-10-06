@@ -33,14 +33,26 @@
       .printer-actions .primary { background: #f3b54a; border-color: #f3b54a; color: #241706; font-weight: 700; }
       .settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
       .field { display: grid; gap: 6px; color: #aab7c8; font-size: 12px; font-weight: 700; }
-      .field input, .field select, .product-row input { width: 100%; min-height: 42px; margin: 0; padding: 8px 10px; border: 1px solid #536176; border-radius: 5px; background: #172333; color: #fff; font: inherit; }
+      .field input, .field select, .product-row input, .product-row select { width: 100%; min-height: 42px; margin: 0; padding: 8px 10px; border: 1px solid #536176; border-radius: 5px; background: #172333; color: #fff; font: inherit; }
       .field input[type="color"] { padding: 4px; }
       .field small { color: #8997aa; font-weight: 400; }
       .product-list { display: grid; gap: 10px; margin-top: 16px; }
-      .product-row { display: grid; grid-template-columns: minmax(110px, 1.2fr) minmax(110px, 1.5fr) 95px 72px 75px; align-items: center; gap: 8px; padding: 10px; border: 1px solid #3c4a5d; border-radius: 6px; }
+      .product-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 8px; padding: 10px; border: 1px solid #3c4a5d; border-radius: 6px; }
+      .product-row[data-deleted="1"] { display: none; }
       .product-row label { display: flex; align-items: center; gap: 6px; color: #aab7c8; font-size: 12px; }
       .product-row input[type="checkbox"] { width: 17px; min-height: 17px; }
-      .product-row .video-upload { grid-column: 1 / -1; }
+      .product-row .video-upload, .product-row .product-description { grid-column: span 2; }
+      .product-row .product-actions { display: flex; align-items: center; gap: 8px; }
+      .product-row .product-actions button, .add-product { min-height: 38px; padding: 0 12px; border: 1px solid #69778a; border-radius: 5px; background: #263445; color: #fff; font: inherit; }
+      .add-product { margin-top: 12px; border-color: #10b981; background: #10b981; color: #062b25; font-weight: 800; }
+      .orders-list { display: grid; gap: 10px; margin-top: 16px; }
+      .admin-order { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 14px; padding: 13px; border: 1px solid #3c4a5d; border-radius: 6px; }
+      .admin-order strong { color: #fff; }
+      .admin-order-meta, .admin-order-items, .admin-print-status { color: #aab7c8; font-size: 12px; }
+      .admin-print-status { grid-column: 1 / -1; }
+      .admin-order-actions { grid-column: 1 / -1; display: flex; gap: 8px; }
+      .admin-order-actions button, .refresh-orders { min-height: 36px; padding: 0 11px; border: 1px solid #69778a; border-radius: 5px; background: #263445; color: #fff; font: inherit; }
+      .admin-order-actions button:disabled { opacity: .6; }
       .save-config { margin-top: 16px; padding: 12px 16px; border: 0; border-radius: 5px; background: #10b981; color: #062b25; font: inherit; font-weight: 800; }
       .save-config:disabled { opacity: .6; }
       .config-message { min-height: 22px; margin: 10px 0 0; color: #fbbf24; font-size: 13px; }
@@ -48,7 +60,7 @@
       .actions a { flex: 1 1 180px; padding: 13px; border-radius: 5px; background: #10b981; color: #071d18; font-weight: 700; text-align: center; text-decoration: none; }
       .actions a.secondary { background: #f3b54a; color: #241706; }
       #message { min-height: 24px; margin: 12px 0 0; color: #fbbf24; }
-      @media (max-width: 620px) { .settings-grid { grid-template-columns: 1fr; } .product-row { grid-template-columns: 1fr 1fr; } .product-row .video-upload { grid-column: 1 / -1; } }
+      @media (max-width: 620px) { .settings-grid { grid-template-columns: 1fr; } .product-row { grid-template-columns: 1fr 1fr; } .product-row .video-upload, .product-row .product-description { grid-column: 1 / -1; } }
       @media (max-width: 420px) { main { padding: 22px 14px 36px; } header { align-items: flex-start; flex-direction: column; margin-bottom: 24px; } .panel { padding: 18px; } }
     </style>
   </head>
@@ -71,11 +83,9 @@
         <p class="muted">Connect the iPad and this phone to the same Wi-Fi network.</p>
         <div class="urls">
           <div class="url-row"><a id="kioskUrl" href="#">Waiting for server</a><button type="button" data-copy="kioskUrl">Copy</button></div>
-          <div class="url-row"><a id="adminUrl" href="#">Waiting for server</a><button type="button" data-copy="adminUrl">Copy</button></div>
         </div>
         <div class="actions">
           <a id="openKiosk" href="#">Open kiosk</a>
-          <a id="openAdmin" class="secondary" href="#">Open admin</a>
         </div>
       </section>
 
@@ -94,9 +104,11 @@
       </section>
 
       <section class="panel" id="kiosk-settings" aria-labelledby="settingsTitle">
-        <h2 id="settingsTitle">Kiosk appearance & menu</h2>
-        <p class="muted">Changes are saved on this phone and appear on connected kiosks.</p>
+        <h2 id="settingsTitle">In-app admin · menu, kiosk & receipts</h2>
+        <p class="muted">Admin controls are available in this app only. Changes are saved on this phone and appear on connected kiosks.</p>
         <div class="settings-grid">
+          <label class="field">Business name<input id="business-name" maxlength="80"></label>
+          <label class="field">Featured section title<input id="featured-label" maxlength="40" placeholder="Most popular"></label>
           <label class="field">Theme
             <select id="theme"><option value="light">Light</option><option value="dark">Dark</option><option value="neon">Neon accent</option></select>
           </label>
@@ -111,10 +123,33 @@
           </label>
           <label class="field"><span>Neon borders</span><input id="neon-borders" type="checkbox"></label>
           <label class="field">Upload background video<input id="background-upload" type="file" accept="video/mp4,video/webm"></label>
+          <label class="field">Cart promo image/video URL
+            <input id="promo-media" type="url" placeholder="/media/promo.mp4">
+            <small>Displayed below the cart. Supports MP4/WebM video and JPG/PNG/WebP image.</small>
+          </label>
+          <label class="field">Upload cart promo<input id="promo-upload" type="file" accept="video/mp4,video/webm,image/jpeg,image/png,image/webp"></label>
+          <label class="field">Kitchen bill heading<input id="bill-heading" maxlength="50"></label>
+          <label class="field">Token slip heading<input id="token-heading" maxlength="50"></label>
+          <label class="field">Token collection message<input id="token-instruction" maxlength="80"></label>
+          <label class="field">Delay before token prints
+            <select id="token-print-delay"><option value="2">2 seconds</option><option value="3">3 seconds</option></select>
+          </label>
+          <label class="field">Receipt text size
+            <select id="receipt-font-scale"><option value="1">Normal</option><option value="2">Large</option><option value="3">Extra large</option></select>
+          </label>
         </div>
         <div class="product-list" id="product-list"><p class="muted">Loading menu settings…</p></div>
-        <button id="save-config" class="save-config" type="button">Save appearance and menu</button>
+        <button id="add-product" class="add-product" type="button">＋ Add menu item</button>
+        <button id="save-config" class="save-config" type="button">Save admin settings</button>
         <p id="config-message" class="config-message" role="status"></p>
+      </section>
+
+      <section class="panel" aria-labelledby="ordersTitle">
+        <h2 id="ordersTitle">Recent orders & print retries</h2>
+        <p class="muted">Review order tokens and retry either slip if a printer error occurs. Payment is collected separately and is not confirmed here.</p>
+        <button id="refresh-orders" class="refresh-orders" type="button">Refresh orders</button>
+        <div id="orders-message" class="config-message" role="status"></div>
+        <div id="recent-orders" class="orders-list"><p class="muted">Orders appear while the phone server is running.</p></div>
       </section>
     </main>
 
@@ -131,15 +166,36 @@
       const testPrinter = document.getElementById('testPrinter');
       const configMessage = document.getElementById('config-message');
       const productList = document.getElementById('product-list');
-      let configProducts = [];
+      let configCategories = [];
+      let nextNewProductId = -1;
       let working = false;
       let configLoaded = false;
       let configLoading = false;
+      let ordersLoading = false;
 
       function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, (character) => ({
           '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
         }[character]));
+      }
+
+      function renderProductRow(product) {
+        const categories = configCategories.map((category) => `
+          <option value="${Number(category.id)}" ${Number(product.categoryId) === Number(category.id) ? 'selected' : ''}>${escapeHtml(category.name)}</option>
+        `).join('');
+        return `
+          <div class="product-row" data-id="${Number(product.id)}">
+            <input class="product-name" aria-label="Item name" maxlength="80" placeholder="Item name" value="${escapeHtml(product.name)}">
+            <input class="product-description" aria-label="Item description" maxlength="200" placeholder="Description" value="${escapeHtml(product.description)}">
+            <select class="product-category" aria-label="Item category">${categories}</select>
+            <input class="product-price" aria-label="Price in rupees" type="number" min="0" step="0.01" placeholder="Price ₹" value="${(Number(product.pricePaise) / 100).toFixed(2)}">
+            <input class="product-sort" aria-label="Display order" type="number" min="0" max="9999" value="${Number(product.sortOrder) || 0}">
+            <label><input class="product-available" type="checkbox" ${product.available ? 'checked' : ''}> Available</label>
+            <label><input class="product-featured" type="checkbox" ${product.featured ? 'checked' : ''}> Featured (max 4)</label>
+            <input class="video-url video-upload" aria-label="Item video URL" placeholder="Optional item video URL" value="${escapeHtml(product.videoUrl || '')}">
+            <label class="video-upload">Upload item video<input class="product-video" data-product-video="${Number(product.id)}" type="file" accept="video/mp4,video/webm"></label>
+            <div class="product-actions"><button data-remove-product type="button">Remove</button></div>
+          </div>`;
       }
 
       async function loadConfiguration() {
@@ -153,20 +209,20 @@
           document.getElementById('theme').value = settings.kiosk_theme || 'light';
           document.getElementById('accent-color').value = settings.kiosk_accent_color || '#b64f2c';
           document.getElementById('background-video').value = settings.kiosk_background_video || '';
+          document.getElementById('promo-media').value = settings.kiosk_promo_media || '';
           document.getElementById('background-opacity').value = settings.kiosk_background_opacity || '12';
           document.getElementById('opacity-value').textContent = document.getElementById('background-opacity').value;
           document.getElementById('neon-borders').checked = settings.kiosk_neon_borders === '1';
-          configProducts = Array.isArray(data.products) ? data.products : [];
-          productList.innerHTML = configProducts.map((product) => `
-            <div class="product-row" data-id="${Number(product.id)}">
-              <input class="product-name" aria-label="Item name" maxlength="80" value="${escapeHtml(product.name)}">
-              <input class="product-description" aria-label="Item description" maxlength="200" value="${escapeHtml(product.description)}">
-              <input class="product-price" aria-label="Price in rupees" type="number" min="0" step="0.01" value="${(Number(product.pricePaise) / 100).toFixed(2)}">
-              <input class="product-sort" aria-label="Display order" type="number" min="0" max="9999" value="${Number(product.sortOrder)}">
-              <label><input class="product-available" type="checkbox" ${product.available ? 'checked' : ''}> Available</label>
-              <input class="video-url video-upload" aria-label="Item video URL" placeholder="Optional item video URL" value="${escapeHtml(product.videoUrl || '')}">
-              <label class="video-upload">Upload item video<input class="product-video" data-product-video="${Number(product.id)}" type="file" accept="video/mp4,video/webm"></label>
-            </div>`).join('') || '<p class="muted">No menu items found.</p>';
+          document.getElementById('business-name').value = settings.business_name || 'FOOD TRUCK';
+          document.getElementById('featured-label').value = settings.kiosk_featured_label || 'Most popular';
+          document.getElementById('bill-heading').value = settings.receipt_bill_heading || 'KITCHEN ORDER / CUSTOMER BILL';
+          document.getElementById('token-heading').value = settings.receipt_token_heading || 'CUSTOMER TOKEN';
+          document.getElementById('token-instruction').value = settings.receipt_token_instruction || 'Keep this token for collection.';
+          document.getElementById('token-print-delay').value = settings.token_print_delay_seconds || '3';
+          document.getElementById('receipt-font-scale').value = settings.receipt_font_scale || '1';
+          configCategories = Array.isArray(data.categories) ? data.categories : [];
+          const products = Array.isArray(data.products) ? data.products : [];
+          productList.innerHTML = products.map(renderProductRow).join('') || '<p class="muted">No menu items found.</p>';
           configMessage.textContent = '';
           configLoaded = true;
         } catch (error) {
@@ -176,15 +232,72 @@
         }
       }
 
-      async function uploadVideo(file) {
+      async function uploadVideo(file, kind = 'video') {
         if (!file) return '';
         const body = new FormData();
         body.append('video', file);
+        body.append('kind', kind);
         const response = await fetch(settingsApiBase + '/api/admin/videos', { method: 'POST', body });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'Video upload failed.');
         return result.url;
       }
+
+      async function loadRecentOrders() {
+        if (!plugin || ordersLoading) return;
+        ordersLoading = true;
+        try {
+          const response = await fetch(settingsApiBase + '/api/admin/orders');
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || 'Could not load orders.');
+          const orders = Array.isArray(data.orders) ? data.orders.slice().reverse() : [];
+          document.getElementById('recent-orders').innerHTML = orders.length ? orders.map((order) => {
+            const token = Number(order.tokenNumber) || Number(order.id) + 100;
+            const items = Array.isArray(order.items)
+              ? order.items.map((item) => `${escapeHtml(item.name)} × ${Number(item.qty) || 0}`).join(' · ')
+              : '';
+            const bill = escapeHtml(order.billPrintStatus || 'unknown');
+            const tokenPrint = escapeHtml(order.tokenPrintStatus || 'unknown');
+            const time = order.createdAt
+              ? new Date(Number(order.createdAt)).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+              : '';
+            return `
+              <article class="admin-order">
+                <strong>Token #${token}</strong><span class="admin-order-meta">${escapeHtml(time)} · ₹${Number(order.total || 0).toFixed(2)}</span>
+                <div class="admin-order-items">${items || 'Order items unavailable'}</div>
+                <div class="admin-print-status">Order summary: ${bill} · Token slip: ${tokenPrint}</div>
+                <div class="admin-order-actions">
+                  <button data-reprint="${Number(order.id)}" data-kind="bill" type="button">Reprint summary</button>
+                  <button data-reprint="${Number(order.id)}" data-kind="token" type="button">Reprint token</button>
+                </div>
+              </article>`;
+          }).join('') : '<p class="muted">No orders yet.</p>';
+          document.getElementById('orders-message').textContent = '';
+        } catch (error) {
+          document.getElementById('orders-message').textContent = error.message || 'Could not load orders.';
+        } finally {
+          ordersLoading = false;
+        }
+      }
+
+      document.getElementById('recent-orders').addEventListener('click', async (event) => {
+        const button = event.target.closest('[data-reprint]');
+        if (!button) return;
+        button.disabled = true;
+        try {
+          const response = await fetch(`${settingsApiBase}/api/admin/orders/${button.dataset.reprint}/print/${button.dataset.kind}`, { method: 'POST' });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || 'Could not queue this print retry.');
+          document.getElementById('orders-message').textContent =
+            `${button.dataset.kind === 'bill' ? 'Order summary' : 'Token slip'} reprint queued.`;
+          window.setTimeout(loadRecentOrders, 1000);
+        } catch (error) {
+          document.getElementById('orders-message').textContent = error.message || 'Could not queue this print retry.';
+          button.disabled = false;
+        }
+      });
+      document.getElementById('refresh-orders').addEventListener('click', loadRecentOrders);
+      window.setInterval(loadRecentOrders, 8000);
 
       document.getElementById('background-upload').addEventListener('change', async (event) => {
         const file = event.target.files?.[0];
@@ -200,7 +313,26 @@
         }
       });
 
+      document.getElementById('promo-upload').addEventListener('change', async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        configMessage.textContent = 'Uploading cart promo…';
+        try {
+          document.getElementById('promo-media').value = await uploadVideo(file, 'promo');
+          configMessage.textContent = 'Promo uploaded. Save to apply it.';
+        } catch (error) {
+          configMessage.textContent = error.message || 'Promo upload failed.';
+        } finally {
+          event.target.value = '';
+        }
+      });
+
       productList.addEventListener('change', async (event) => {
+        const featured = event.target.closest('.product-featured');
+        if (featured?.checked && productList.querySelectorAll('.product-row:not([data-deleted="1"]) .product-featured:checked').length > 4) {
+          featured.checked = false;
+          configMessage.textContent = 'Choose up to four featured items.';
+        }
         const input = event.target.closest('[data-product-video]');
         const file = input?.files?.[0];
         if (!input || !file) return;
@@ -218,19 +350,49 @@
       document.getElementById('background-opacity').addEventListener('input', (event) => {
         document.getElementById('opacity-value').textContent = event.target.value;
       });
+      document.getElementById('add-product').addEventListener('click', () => {
+        if (!configCategories.length) {
+          configMessage.textContent = 'Add an available category before adding menu items.';
+          return;
+        }
+        const category = configCategories[0];
+        const sortOrder = productList.querySelectorAll('.product-row:not([data-deleted="1"])').length;
+        productList.insertAdjacentHTML('beforeend', renderProductRow({
+          id: nextNewProductId--,
+          categoryId: category.id,
+          name: '',
+          description: '',
+          pricePaise: 0,
+          sortOrder,
+          available: true,
+          featured: false,
+        }));
+      });
+      productList.addEventListener('click', (event) => {
+        const remove = event.target.closest('[data-remove-product]');
+        if (!remove) return;
+        const row = remove.closest('.product-row');
+        if (Number(row.dataset.id) > 0) row.dataset.deleted = '1';
+        else row.remove();
+      });
       document.getElementById('save-config').addEventListener('click', async (event) => {
         const button = event.currentTarget;
         button.disabled = true;
         configMessage.textContent = 'Saving settings…';
         try {
           const products = [...productList.querySelectorAll('.product-row')].map((row) => ({
-            id: Number(row.dataset.id),
-            name: row.querySelector('.product-name').value,
-            description: row.querySelector('.product-description').value,
-            price: Number(row.querySelector('.product-price').value),
-            sortOrder: Number(row.querySelector('.product-sort').value),
-            available: row.querySelector('.product-available').checked,
-            videoUrl: row.querySelector('.video-url').value,
+            row,
+            product: {
+              id: Math.max(0, Number(row.dataset.id)),
+              categoryId: Number(row.querySelector('.product-category').value),
+              name: row.querySelector('.product-name').value,
+              description: row.querySelector('.product-description').value,
+              price: Number(row.querySelector('.product-price').value),
+              sortOrder: Number(row.querySelector('.product-sort').value),
+              available: row.querySelector('.product-available').checked,
+              featured: row.querySelector('.product-featured').checked,
+              videoUrl: row.querySelector('.video-url').value,
+            },
           }));
           const response = await fetch(settingsApiBase + '/api/admin/config', {
             method: 'POST',
@@ -240,18 +402,27 @@
                 theme: document.getElementById('theme').value,
                 accentColor: document.getElementById('accent-color').value,
                 backgroundVideo: document.getElementById('background-video').value,
+                promoMedia: document.getElementById('promo-media').value,
                 backgroundOpacity: Number(document.getElementById('background-opacity').value),
                 neonBorders: document.getElementById('neon-borders').checked,
+                businessName: document.getElementById('business-name').value,
+                featuredLabel: document.getElementById('featured-label').value,
+                billHeading: document.getElementById('bill-heading').value,
+                tokenHeading: document.getElementById('token-heading').value,
+                tokenInstruction: document.getElementById('token-instruction').value,
+                tokenPrintDelay: Number(document.getElementById('token-print-delay').value),
+                receiptFontScale: Number(document.getElementById('receipt-font-scale').value),
               },
-              products,
+              products: products.filter(({ row }) => row.dataset.deleted !== '1').map(({ product }) => product),
+              deleteProductIds: products.filter(({ row }) => row.dataset.deleted === '1').map(({ product }) => product.id),
             }),
           });
           const result = await response.json();
           if (!response.ok) throw new Error(result.error || 'Could not save settings.');
-          configLoaded = true;
-          configMessage.textContent = 'Saved. Refresh the kiosk page to see the changes.';
+          configLoaded = false;
+          configMessage.textContent = 'Saved. The kiosk will show the changes the next time it loads.';
           await loadConfiguration();
-          configMessage.textContent = 'Saved. Refresh the kiosk page to see the changes.';
+          configMessage.textContent = 'Saved. The kiosk will show the changes the next time it loads.';
         } catch (error) {
           configMessage.textContent = error.message || 'Could not save settings.';
         } finally {
@@ -289,12 +460,12 @@
 
           const base = result.ipAddress ? 'http://' + result.ipAddress + ':' + result.port : '';
           const kiosk = base ? base + '/kiosk.html' : '';
-          const admin = base ? base + '/admin.html' : '';
           setUrl('kioskUrl', kiosk);
-          setUrl('adminUrl', admin);
           document.getElementById('openKiosk').href = kiosk || '#';
-          document.getElementById('openAdmin').href = admin || '#';
-          if (running) loadConfiguration();
+          if (running) {
+            loadConfiguration();
+            loadRecentOrders();
+          }
         } catch (error) {
           statusText.textContent = 'Server status unavailable';
           detail.textContent = error.message || 'Reopen the app and check its notification permission.';
