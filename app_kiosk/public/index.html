@@ -4,20 +4,20 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#111827" />
-    <title>Food Kiosk Server</title>
+    <title>Food Truck · Admin</title>
     <style>
       :root { color-scheme: dark; font-family: "Trebuchet MS", sans-serif; background: #111827; color: #f8fafc; }
       * { box-sizing: border-box; }
       body { margin: 0; min-height: 100vh; background: linear-gradient(155deg, #182637, #111827 55%, #101d1b); }
-      main { width: min(760px, 100%); margin: 0 auto; padding: 28px 20px 48px; }
-      header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 10px 0 34px; }
+      main { width: min(1080px, 100%); margin: 0 auto; padding: 28px 20px 48px; }
+      header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 10px 0 22px; }
       h1 { margin: 0; font-size: 30px; }
       h2 { margin: 0 0 6px; font-size: 21px; }
       p { line-height: 1.5; }
       .status { display: flex; align-items: center; gap: 9px; color: #cbd5e1; }
       .dot { width: 10px; height: 10px; border-radius: 50%; background: #64748b; }
       .dot.on { background: #2dd4a3; box-shadow: 0 0 14px #2dd4a377; }
-      .panel { padding: 22px; margin-top: 16px; border: 1px solid #354255; border-radius: 8px; background: #1f2937; }
+      .panel { padding: 22px; margin-top: 16px; border: 1px solid #354255; border-radius: 16px; background: linear-gradient(145deg, #1f2937, #182435); box-shadow: 0 10px 32px #050b1540; }
       .muted { margin: 0; color: #aab7c8; }
       .switch { width: 100%; min-height: 54px; margin-top: 20px; border: 0; border-radius: 6px; background: #10b981; color: #062b25; font: inherit; font-size: 18px; font-weight: 700; }
       .switch.off { background: #e0715e; color: #fff; }
@@ -56,42 +56,82 @@
       .save-config { margin-top: 16px; padding: 12px 16px; border: 0; border-radius: 5px; background: #10b981; color: #062b25; font: inherit; font-weight: 800; }
       .save-config:disabled { opacity: .6; }
       .config-message { min-height: 22px; margin: 10px 0 0; color: #fbbf24; font-size: 13px; }
+      .admin-brand { display: flex; align-items: center; gap: 12px; }
+      .admin-brand-mark { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 14px; background: #c65a32; font-size: 26px; }
+      .admin-tabs, .settings-tabs { display: flex; gap: 8px; margin: 0 -2px 16px; padding: 4px 2px 10px; overflow-x: auto; scrollbar-width: thin; }
+      .admin-tabs { position: sticky; top: 0; z-index: 5; background: #111827eF; }
+      .admin-tabs button, .settings-tabs button { flex: 0 0 auto; min-height: 42px; padding: 9px 16px; border: 1px solid #354255; border-radius: 999px; background: #1b2739; color: #aab7c8; font: inherit; font-size: 13px; font-weight: 750; }
+      .admin-tabs button[aria-selected="true"], .settings-tabs button[aria-selected="true"] { border-color: #c65a32; background: #c65a32; color: #fff; }
+      [data-admin-view][hidden], [data-settings-panel][hidden] { display: none !important; }
+      .panel-heading { margin-bottom: 6px; }
+      .panel-heading + .muted { margin-bottom: 16px; }
+      .settings-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 14px; }
+      .field { font-size: 13px; }
+      .field input, .field select, .product-row input, .product-row select, textarea { border-radius: 9px; }
+      .field input:focus, .field select:focus, .product-row input:focus, .product-row select:focus { outline: 2px solid #f9731688; border-color: #f97316; }
+      .brand-upload { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; margin-top: 14px; }
+      .brand-upload img { width: 56px; height: 56px; grid-row: span 2; border-radius: 12px; background: #0e1830; object-fit: contain; }
+      .brand-upload img[hidden] { display: none; }
+      .settings-tabs { margin-top: 18px; }
+      .settings-pane { padding: 4px 0; }
+      .settings-help { margin-top: 6px; color: #8997aa; font-size: 12px; }
+      .admin-view { margin-top: 2px; }
+      .printer-actions button, .actions a, .save-config, .add-product, .admin-order-actions button, .refresh-orders, .switch, .url-row button { border-radius: 10px; }
+      .switch { background: #c65a32; color: #fff; }
+      .switch.off { background: #9f4130; }
+      .add-product { border-color: #c65a32; background: #c65a32; color: #fff; }
+      .save-config { background: #f97316; color: #fff; }
+      .config-message { overflow-wrap: anywhere; }
+      .muted { line-height: 1.55; }
       .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
       .actions a { flex: 1 1 180px; padding: 13px; border-radius: 5px; background: #10b981; color: #071d18; font-weight: 700; text-align: center; text-decoration: none; }
       .actions a.secondary { background: #f3b54a; color: #241706; }
       #message { min-height: 24px; margin: 12px 0 0; color: #fbbf24; }
+      @media (max-width: 760px) { .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
       @media (max-width: 620px) { .settings-grid { grid-template-columns: 1fr; } .product-row { grid-template-columns: 1fr 1fr; } .product-row .video-upload, .product-row .product-description { grid-column: 1 / -1; } }
-      @media (max-width: 420px) { main { padding: 22px 14px 36px; } header { align-items: flex-start; flex-direction: column; margin-bottom: 24px; } .panel { padding: 18px; } }
+      @media (max-width: 420px) { main { padding: 20px 14px 36px; } header { align-items: flex-start; flex-direction: column; margin-bottom: 16px; } .panel { padding: 18px; } .admin-brand-mark { width: 40px; height: 40px; } .brand-upload { grid-template-columns: 1fr; } .brand-upload img { grid-row: auto; } }
     </style>
   </head>
   <body>
     <main>
       <header>
-        <h1>Food Kiosk</h1>
+        <div class="admin-brand"><span class="admin-brand-mark" aria-hidden="true">🚚</span><h1>Food Truck</h1></div>
         <div class="status" aria-live="polite"><span id="statusDot" class="dot"></span><span id="statusText">Checking server</span></div>
       </header>
 
-      <section class="panel" aria-labelledby="serverTitle">
-        <h2 id="serverTitle">Phone server</h2>
-        <p id="serverDetail" class="muted">Starting the local kiosk service...</p>
-        <button id="serverToggle" class="switch" type="button" disabled>Checking...</button>
-        <p id="message" role="status"></p>
-      </section>
+      <nav class="admin-tabs" role="tablist" aria-label="Admin sections">
+        <button type="button" role="tab" data-admin-tab="overview" aria-selected="true">Overview</button>
+        <button type="button" role="tab" data-admin-tab="menu" aria-selected="false">Menu</button>
+        <button type="button" role="tab" data-admin-tab="brand" aria-selected="false">Kiosk &amp; brand</button>
+        <button type="button" role="tab" data-admin-tab="receipts" aria-selected="false">Receipts</button>
+        <button type="button" role="tab" data-admin-tab="orders" aria-selected="false">Orders</button>
+        <button type="button" role="tab" data-admin-tab="printer" aria-selected="false">Printer</button>
+      </nav>
+      <p id="config-message" class="config-message" role="status"></p>
 
-      <section class="panel" aria-labelledby="linksTitle">
-        <h2 id="linksTitle">Connect devices</h2>
-        <p class="muted">Connect the iPad and this phone to the same Wi-Fi network.</p>
-        <div class="urls">
-          <div class="url-row"><a id="kioskUrl" href="#">Waiting for server</a><button type="button" data-copy="kioskUrl">Copy</button></div>
-        </div>
-        <div class="actions">
-          <a id="openKiosk" href="#">Open kiosk</a>
-        </div>
-      </section>
+      <div class="admin-view" data-admin-view="overview">
+        <section class="panel" aria-labelledby="serverTitle">
+          <h2 class="panel-heading" id="serverTitle">Phone server</h2>
+          <p id="serverDetail" class="muted">Starting the local kiosk service...</p>
+          <button id="serverToggle" class="switch" type="button" disabled>Checking...</button>
+          <p id="message" role="status"></p>
+        </section>
 
-      <section class="panel" aria-labelledby="printerTitle">
-        <h2 id="printerTitle">Bluetooth printer</h2>
-        <p class="muted">Pair a Classic Bluetooth ESC/POS printer in Android Settings, then select it here.</p>
+        <section class="panel" aria-labelledby="linksTitle">
+          <h2 class="panel-heading" id="linksTitle">Connect devices</h2>
+          <p class="muted">Connect the tablet and this phone to the same Wi-Fi network.</p>
+          <div class="urls">
+            <div class="url-row"><a id="kioskUrl" href="#">Waiting for server</a><button type="button" data-copy="kioskUrl">Copy</button></div>
+          </div>
+          <div class="actions">
+            <a id="openKiosk" href="#">Open kiosk</a>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel admin-view" data-admin-view="printer" aria-labelledby="printerTitle" hidden>
+        <h2 class="panel-heading" id="printerTitle">Bluetooth printer</h2>
+        <p class="muted">Pair a Classic Bluetooth ESC/POS printer in Android Settings, then select and test it here.</p>
         <select id="printerSelect" aria-label="Paired Bluetooth printer">
           <option value="">Loading paired printers...</option>
         </select>
@@ -103,32 +143,79 @@
         <p id="printerMessage" class="muted" role="status"></p>
       </section>
 
-      <section class="panel" id="kiosk-settings" aria-labelledby="settingsTitle">
-        <h2 id="settingsTitle">In-app admin · menu, kiosk & receipts</h2>
-        <p class="muted">Admin controls are available in this app only. Changes are saved on this phone and appear on connected kiosks.</p>
+      <section class="panel admin-view" id="kiosk-settings" data-admin-view="brand" aria-labelledby="settingsTitle" hidden>
+        <h2 class="panel-heading" id="settingsTitle">Kiosk &amp; brand</h2>
+        <p class="muted">Update the kiosk look and customer-facing messages. These settings do not change the kiosk layout.</p>
+        <nav class="settings-tabs" role="tablist" aria-label="Kiosk settings">
+          <button type="button" role="tab" data-settings-tab="brand" aria-selected="true">Brand &amp; appearance</button>
+          <button type="button" role="tab" data-settings-tab="dialogue" aria-selected="false">Kiosk messages</button>
+        </nav>
+        <div class="settings-pane" data-settings-panel="brand">
+          <div class="settings-grid">
+            <label class="field">Business name<input id="business-name" maxlength="80"></label>
+            <label class="field">Featured section title<input id="featured-label" maxlength="40" placeholder="Most popular"></label>
+            <label class="field">Theme
+              <select id="theme"><option value="light">Light</option><option value="dark">Dark</option><option value="neon">Neon accent</option></select>
+            </label>
+            <label class="field">Accent color<input id="accent-color" type="color" value="#b64f2c"></label>
+            <div class="field brand-upload">
+              <label for="logo-url">Kiosk logo image URL</label>
+              <input id="logo-url" type="url" placeholder="/media/logo.png">
+              <img id="logo-preview" alt="Logo preview" hidden>
+              <label for="logo-upload">Upload PNG, JPG, or WebP</label>
+              <input id="logo-upload" type="file" accept="image/png,image/jpeg,image/webp">
+              <small>Shown in the existing kiosk header. Leave blank to use the Food Truck icon.</small>
+            </div>
+            <label class="field">Background video URL
+              <input id="background-video" type="url" placeholder="/media/your-video.mp4">
+              <small>Upload MP4/WebM or paste a direct HTTPS MP4/WebM URL.</small>
+            </label>
+            <label class="field">Background opacity
+              <input id="background-opacity" type="range" min="3" max="24" value="12">
+              <small><span id="opacity-value">12</span>% · kept subtle for readability</small>
+            </label>
+            <label class="field"><span>Neon borders</span><input id="neon-borders" type="checkbox"></label>
+            <label class="field">Upload background video<input id="background-upload" type="file" accept="video/mp4,video/webm"></label>
+            <label class="field">Cart promo image/video URL
+              <input id="promo-media" type="url" placeholder="/media/promo.mp4">
+              <small>Displayed below the cart. Supports MP4/WebM video and JPG/PNG/WebP image.</small>
+            </label>
+            <label class="field">Upload cart promo<input id="promo-upload" type="file" accept="video/mp4,video/webm,image/jpeg,image/png,image/webp"></label>
+          </div>
+        </div>
+        <div class="settings-pane" data-settings-panel="dialogue" hidden>
+          <p class="settings-help">Edit kiosk wording here. Empty messages are not allowed, so customers always receive clear instructions.</p>
+          <div class="settings-grid">
+            <label class="field">Intro label<input id="hero-eyebrow" maxlength="60"></label>
+            <label class="field">Headline · first line<input id="hero-heading-top" maxlength="50"></label>
+            <label class="field">Headline · second line<input id="hero-heading-bottom" maxlength="50"></label>
+            <label class="field">Welcome message<textarea id="hero-message" maxlength="200" rows="3"></textarea></label>
+            <label class="field">Payment/counter message<textarea id="counter-message" maxlength="100" rows="2"></textarea></label>
+            <label class="field">Cart instruction<textarea id="cart-message" maxlength="120" rows="2"></textarea></label>
+            <label class="field">Confirm-order note<textarea id="checkout-message" maxlength="160" rows="2"></textarea></label>
+            <label class="field">Order confirmation heading<input id="confirmation-heading" maxlength="60"></label>
+            <label class="field">Order confirmation message<textarea id="confirmation-message" maxlength="200" rows="3"></textarea></label>
+          </div>
+        </div>
+        <div class="settings-actions">
+          <button id="save-config" class="save-config" type="button">Save kiosk settings</button>
+        </div>
+      </section>
+
+      <section class="panel admin-view" data-admin-view="menu" aria-labelledby="menuTitle" hidden>
+        <h2 class="panel-heading" id="menuTitle">Menu &amp; featured items</h2>
+        <p class="muted">Edit item names, prices, availability, videos, and the four featured choices.</p>
+        <div class="product-list" id="product-list"><p class="muted">Loading menu settings…</p></div>
+        <button id="add-product" class="add-product" type="button">＋ Add menu item</button>
+        <button class="save-config" type="button">Save menu changes</button>
+      </section>
+
+      <section class="panel admin-view" data-admin-view="receipts" aria-labelledby="receiptTitle" hidden>
+        <h2 class="panel-heading" id="receiptTitle">Order slips &amp; receipt style</h2>
+        <p class="muted">Customize printed headings and token instructions. Orders still print automatically when confirmed.</p>
         <div class="settings-grid">
-          <label class="field">Business name<input id="business-name" maxlength="80"></label>
-          <label class="field">Featured section title<input id="featured-label" maxlength="40" placeholder="Most popular"></label>
-          <label class="field">Theme
-            <select id="theme"><option value="light">Light</option><option value="dark">Dark</option><option value="neon">Neon accent</option></select>
-          </label>
-          <label class="field">Accent color<input id="accent-color" type="color" value="#b64f2c"></label>
-          <label class="field">Background video URL
-            <input id="background-video" type="url" placeholder="/media/your-video.mp4">
-            <small>Upload MP4/WebM or paste a direct HTTPS MP4/WebM URL.</small>
-          </label>
-          <label class="field">Background opacity
-            <input id="background-opacity" type="range" min="3" max="24" value="12">
-            <small><span id="opacity-value">12</span>% · kept subtle for readability</small>
-          </label>
-          <label class="field"><span>Neon borders</span><input id="neon-borders" type="checkbox"></label>
-          <label class="field">Upload background video<input id="background-upload" type="file" accept="video/mp4,video/webm"></label>
-          <label class="field">Cart promo image/video URL
-            <input id="promo-media" type="url" placeholder="/media/promo.mp4">
-            <small>Displayed below the cart. Supports MP4/WebM video and JPG/PNG/WebP image.</small>
-          </label>
-          <label class="field">Upload cart promo<input id="promo-upload" type="file" accept="video/mp4,video/webm,image/jpeg,image/png,image/webp"></label>
           <label class="field">Kitchen bill heading<input id="bill-heading" maxlength="50"></label>
+          <label class="field">Bill collection message<input id="bill-instruction" maxlength="80"></label>
           <label class="field">Token slip heading<input id="token-heading" maxlength="50"></label>
           <label class="field">Token collection message<input id="token-instruction" maxlength="80"></label>
           <label class="field">Delay before token prints
@@ -138,19 +225,17 @@
             <select id="receipt-font-scale"><option value="1">Normal</option><option value="2">Large</option><option value="3">Extra large</option></select>
           </label>
         </div>
-        <div class="product-list" id="product-list"><p class="muted">Loading menu settings…</p></div>
-        <button id="add-product" class="add-product" type="button">＋ Add menu item</button>
-        <button id="save-config" class="save-config" type="button">Save admin settings</button>
-        <p id="config-message" class="config-message" role="status"></p>
+        <button class="save-config" type="button">Save receipt settings</button>
       </section>
 
-      <section class="panel" aria-labelledby="ordersTitle">
-        <h2 id="ordersTitle">Recent orders & print retries</h2>
+      <section class="panel admin-view" data-admin-view="orders" aria-labelledby="ordersTitle" hidden>
+        <h2 class="panel-heading" id="ordersTitle">Recent orders &amp; print retries</h2>
         <p class="muted">Review order tokens and retry either slip if a printer error occurs. Payment is collected separately and is not confirmed here.</p>
         <button id="refresh-orders" class="refresh-orders" type="button">Refresh orders</button>
         <div id="orders-message" class="config-message" role="status"></div>
         <div id="recent-orders" class="orders-list"><p class="muted">Orders appear while the phone server is running.</p></div>
       </section>
+
     </main>
 
     <script>
@@ -179,6 +264,34 @@
         }[character]));
       }
 
+      function showAdminTab(name) {
+        document.querySelectorAll('[data-admin-view]').forEach((view) => {
+          view.hidden = view.dataset.adminView !== name;
+        });
+        document.querySelectorAll('[data-admin-tab]').forEach((tab) => {
+          tab.setAttribute('aria-selected', String(tab.dataset.adminTab === name));
+        });
+        if (plugin && ['brand', 'menu', 'receipts'].includes(name) && !configLoaded) loadConfiguration();
+        if (name === 'orders') loadRecentOrders();
+        if (name === 'printer') refreshPrinters();
+      }
+
+      function showSettingsPanel(name) {
+        document.querySelectorAll('[data-settings-panel]').forEach((panel) => {
+          panel.hidden = panel.dataset.settingsPanel !== name;
+        });
+        document.querySelectorAll('[data-settings-tab]').forEach((tab) => {
+          tab.setAttribute('aria-selected', String(tab.dataset.settingsTab === name));
+        });
+      }
+
+      document.querySelectorAll('[data-admin-tab]').forEach((tab) => {
+        tab.addEventListener('click', () => showAdminTab(tab.dataset.adminTab));
+      });
+      document.querySelectorAll('[data-settings-tab]').forEach((tab) => {
+        tab.addEventListener('click', () => showSettingsPanel(tab.dataset.settingsTab));
+      });
+
       function renderProductRow(product) {
         const categories = configCategories.map((category) => `
           <option value="${Number(category.id)}" ${Number(product.categoryId) === Number(category.id) ? 'selected' : ''}>${escapeHtml(category.name)}</option>
@@ -198,6 +311,18 @@
           </div>`;
       }
 
+      function updateLogoPreview(url = document.getElementById('logo-url').value.trim()) {
+        const preview = document.getElementById('logo-preview');
+        preview.onerror = () => { preview.hidden = true; };
+        if (!url) {
+          preview.removeAttribute('src');
+          preview.hidden = true;
+          return;
+        }
+        preview.src = url;
+        preview.hidden = false;
+      }
+
       async function loadConfiguration() {
         if (configLoaded || configLoading) return;
         configLoading = true;
@@ -214,8 +339,20 @@
           document.getElementById('opacity-value').textContent = document.getElementById('background-opacity').value;
           document.getElementById('neon-borders').checked = settings.kiosk_neon_borders === '1';
           document.getElementById('business-name').value = settings.business_name || 'FOOD TRUCK';
+          document.getElementById('logo-url').value = settings.business_logo || '';
+          updateLogoPreview(settings.business_logo || '');
           document.getElementById('featured-label').value = settings.kiosk_featured_label || 'Most popular';
+          document.getElementById('hero-eyebrow').value = settings.kiosk_hero_eyebrow || 'A good choice, made easy';
+          document.getElementById('hero-heading-top').value = settings.kiosk_hero_heading_top || 'Order something';
+          document.getElementById('hero-heading-bottom').value = settings.kiosk_hero_heading_bottom || 'you’ll love.';
+          document.getElementById('hero-message').value = settings.kiosk_hero_message || 'Choose your favourites and place your order. We’ll prepare it fresh while you pay at the counter.';
+          document.getElementById('counter-message').value = settings.kiosk_counter_message || 'Pay at the counter · Cash or PhonePe QR';
+          document.getElementById('cart-message').value = settings.kiosk_cart_message || 'Review everything before sending it to the kitchen.';
+          document.getElementById('checkout-message').value = settings.kiosk_checkout_message || 'Confirm your order to print the kitchen bill and token slip. Payment is collected at the counter.';
+          document.getElementById('confirmation-heading').value = settings.kiosk_confirmation_heading || 'Your order is confirmed';
+          document.getElementById('confirmation-message').value = settings.kiosk_confirmation_message || 'Two slips print automatically. Give the order summary to the kitchen and keep your token for collection.';
           document.getElementById('bill-heading').value = settings.receipt_bill_heading || 'KITCHEN ORDER / CUSTOMER BILL';
+          document.getElementById('bill-instruction').value = settings.receipt_bill_instruction || 'COLLECT THE ORDER SUMMARY BILL';
           document.getElementById('token-heading').value = settings.receipt_token_heading || 'CUSTOMER TOKEN';
           document.getElementById('token-instruction').value = settings.receipt_token_instruction || 'Keep this token for collection.';
           document.getElementById('token-print-delay').value = settings.token_print_delay_seconds || '3';
@@ -232,14 +369,14 @@
         }
       }
 
-      async function uploadVideo(file, kind = 'video') {
+      async function uploadMedia(file, kind = 'video') {
         if (!file) return '';
         const body = new FormData();
         body.append('video', file);
         body.append('kind', kind);
-        const response = await fetch(settingsApiBase + '/api/admin/videos', { method: 'POST', body });
+        const response = await fetch(settingsApiBase + '/api/admin/media', { method: 'POST', body });
         const result = await response.json();
-        if (!response.ok) throw new Error(result.error || 'Video upload failed.');
+        if (!response.ok) throw new Error(result.error || 'Media upload failed.');
         return result.url;
       }
 
@@ -258,6 +395,8 @@
               : '';
             const bill = escapeHtml(order.billPrintStatus || 'unknown');
             const tokenPrint = escapeHtml(order.tokenPrintStatus || 'unknown');
+            const billError = order.billPrintError ? ` · ${escapeHtml(order.billPrintError)}` : '';
+            const tokenError = order.tokenPrintError ? ` · ${escapeHtml(order.tokenPrintError)}` : '';
             const time = order.createdAt
               ? new Date(Number(order.createdAt)).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
               : '';
@@ -265,7 +404,7 @@
               <article class="admin-order">
                 <strong>Token #${token}</strong><span class="admin-order-meta">${escapeHtml(time)} · ₹${Number(order.total || 0).toFixed(2)}</span>
                 <div class="admin-order-items">${items || 'Order items unavailable'}</div>
-                <div class="admin-print-status">Order summary: ${bill} · Token slip: ${tokenPrint}</div>
+                <div class="admin-print-status">Order summary: ${bill}${billError} · Token slip: ${tokenPrint}${tokenError}</div>
                 <div class="admin-order-actions">
                   <button data-reprint="${Number(order.id)}" data-kind="bill" type="button">Reprint summary</button>
                   <button data-reprint="${Number(order.id)}" data-kind="token" type="button">Reprint token</button>
@@ -304,7 +443,7 @@
         if (!file) return;
         configMessage.textContent = 'Uploading background video…';
         try {
-          document.getElementById('background-video').value = await uploadVideo(file);
+          document.getElementById('background-video').value = await uploadMedia(file);
           configMessage.textContent = 'Background video uploaded. Save to apply it.';
         } catch (error) {
           configMessage.textContent = error.message || 'Video upload failed.';
@@ -318,7 +457,7 @@
         if (!file) return;
         configMessage.textContent = 'Uploading cart promo…';
         try {
-          document.getElementById('promo-media').value = await uploadVideo(file, 'promo');
+          document.getElementById('promo-media').value = await uploadMedia(file, 'promo');
           configMessage.textContent = 'Promo uploaded. Save to apply it.';
         } catch (error) {
           configMessage.textContent = error.message || 'Promo upload failed.';
@@ -338,12 +477,29 @@
         if (!input || !file) return;
         configMessage.textContent = 'Uploading item video…';
         try {
-          input.closest('.product-row').querySelector('.video-url').value = await uploadVideo(file);
+          input.closest('.product-row').querySelector('.video-url').value = await uploadMedia(file);
           configMessage.textContent = 'Item video uploaded. Save to apply it.';
         } catch (error) {
           configMessage.textContent = error.message || 'Video upload failed.';
         } finally {
           input.value = '';
+        }
+      });
+
+      document.getElementById('logo-url').addEventListener('input', () => updateLogoPreview());
+      document.getElementById('logo-upload').addEventListener('change', async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        configMessage.textContent = 'Uploading logo…';
+        try {
+          const url = await uploadMedia(file, 'logo');
+          document.getElementById('logo-url').value = url;
+          updateLogoPreview(url);
+          configMessage.textContent = 'Logo uploaded. Save kiosk settings to apply it.';
+        } catch (error) {
+          configMessage.textContent = error.message || 'Logo upload failed.';
+        } finally {
+          event.target.value = '';
         }
       });
 
@@ -375,9 +531,14 @@
         if (Number(row.dataset.id) > 0) row.dataset.deleted = '1';
         else row.remove();
       });
-      document.getElementById('save-config').addEventListener('click', async (event) => {
-        const button = event.currentTarget;
-        button.disabled = true;
+      async function saveConfiguration(event) {
+        const buttons = [...document.querySelectorAll('.save-config')];
+        buttons.forEach((button) => { button.disabled = true; });
+        if (!configLoaded) {
+          configMessage.textContent = 'Settings are not loaded yet. Make sure the phone server is running and try again.';
+          buttons.forEach((button) => { button.disabled = false; });
+          return;
+        }
         configMessage.textContent = 'Saving settings…';
         try {
           const products = [...productList.querySelectorAll('.product-row')].map((row) => ({
@@ -406,8 +567,19 @@
                 backgroundOpacity: Number(document.getElementById('background-opacity').value),
                 neonBorders: document.getElementById('neon-borders').checked,
                 businessName: document.getElementById('business-name').value,
+                businessLogo: document.getElementById('logo-url').value,
                 featuredLabel: document.getElementById('featured-label').value,
+                heroEyebrow: document.getElementById('hero-eyebrow').value,
+                heroHeadingTop: document.getElementById('hero-heading-top').value,
+                heroHeadingBottom: document.getElementById('hero-heading-bottom').value,
+                heroMessage: document.getElementById('hero-message').value,
+                counterMessage: document.getElementById('counter-message').value,
+                cartMessage: document.getElementById('cart-message').value,
+                checkoutMessage: document.getElementById('checkout-message').value,
+                confirmationHeading: document.getElementById('confirmation-heading').value,
+                confirmationMessage: document.getElementById('confirmation-message').value,
                 billHeading: document.getElementById('bill-heading').value,
+                billInstruction: document.getElementById('bill-instruction').value,
                 tokenHeading: document.getElementById('token-heading').value,
                 tokenInstruction: document.getElementById('token-instruction').value,
                 tokenPrintDelay: Number(document.getElementById('token-print-delay').value),
@@ -422,12 +594,18 @@
           configLoaded = false;
           configMessage.textContent = 'Saved. The kiosk will show the changes the next time it loads.';
           await loadConfiguration();
+          if (!configLoaded) {
+            throw new Error(configMessage.textContent || 'Settings were saved but could not be reloaded.');
+          }
           configMessage.textContent = 'Saved. The kiosk will show the changes the next time it loads.';
         } catch (error) {
           configMessage.textContent = error.message || 'Could not save settings.';
         } finally {
-          button.disabled = false;
+          buttons.forEach((button) => { button.disabled = false; });
         }
+      }
+      document.querySelectorAll('.save-config').forEach((button) => {
+        button.addEventListener('click', saveConfiguration);
       });
 
       function setUrl(id, url) {
@@ -439,7 +617,7 @@
       async function refreshStatus() {
         if (!plugin) {
           statusText.textContent = 'App bridge unavailable';
-          detail.textContent = 'Close and reopen the installed Food Kiosk app.';
+          detail.textContent = 'Close and reopen the installed Food Truck app.';
           toggle.textContent = 'Server control unavailable';
           toggle.disabled = true;
           return;
@@ -477,6 +655,7 @@
         try {
           const result = await plugin.getPairedPrinters();
           const devices = result.devices || [];
+          const selectedIsAvailable = devices.some((device) => device.address === result.selectedAddress);
           printerSelect.replaceChildren(new Option(
             devices.length ? 'Select a paired printer' : 'No paired printers found',
             ''
@@ -486,8 +665,10 @@
             option.selected = device.address === result.selectedAddress;
             printerSelect.add(option);
           });
-          testPrinter.disabled = !result.selectedAddress;
-          printerMessage.textContent = devices.length
+          testPrinter.disabled = !selectedIsAvailable;
+          printerMessage.textContent = result.selectedAddress && !selectedIsAvailable
+            ? 'The saved printer is no longer paired. Pair it again or select another printer.'
+            : devices.length
             ? 'Choose a paired printer. Classic SPP ESC/POS is supported.'
             : 'Pair the printer first in Android Bluetooth settings.';
         } catch (error) {
@@ -521,7 +702,7 @@
         printerMessage.textContent = 'Sending test receipt...';
         try {
           await plugin.testPrint();
-          printerMessage.textContent = 'Test receipt sent.';
+          printerMessage.textContent = 'Test receipt sent. Check that it printed correctly.';
         } catch (error) {
           printerMessage.textContent = error.message || 'Print failed. Check printer power and pairing.';
         } finally {
@@ -529,6 +710,18 @@
         }
       });
       window.addEventListener('focus', refreshPrinters);
+
+      document.querySelectorAll('[data-admin-tab]').forEach((tab) => {
+        tab.addEventListener('keydown', (event) => {
+          if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+          const tabs = [...document.querySelectorAll('[data-admin-tab]')];
+          const currentIndex = tabs.indexOf(tab);
+          const offset = event.key === 'ArrowRight' ? 1 : -1;
+          const next = tabs[(currentIndex + offset + tabs.length) % tabs.length];
+          next.focus();
+          next.click();
+        });
+      });
 
       toggle.addEventListener('click', async () => {
         if (!plugin || working) return;
@@ -563,7 +756,7 @@
 
       refreshStatus();
       refreshPrinters();
-      if (!plugin) loadConfiguration();
+      if (!plugin) configMessage.textContent = 'Open the installed Food Truck app to manage kiosk settings.';
       setInterval(refreshStatus, 2500);
     </script>
   </body>

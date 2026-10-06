@@ -171,7 +171,7 @@ public class KioskServerService extends Service {
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.stat_notify_sync)
-                .setContentTitle("Food Kiosk server is on")
+                .setContentTitle("Food Truck server is on")
                 .setContentText(status)
                 .setContentIntent(openAppIntent)
                 .setOngoing(true)

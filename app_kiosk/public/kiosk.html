@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f7f4">
-  <title>Order · Food Kiosk</title>
+  <title>Order · Food Truck</title>
   <style>
     :root {
       color-scheme: light;
@@ -30,7 +30,8 @@
     .ambient-wash { position: absolute; inset: 0; background: rgba(250, 249, 245, .42); }
     .topbar { position: relative; z-index: 1; height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 clamp(20px, 5vw, 76px); background: var(--paper); border-bottom: 1px solid var(--line); backdrop-filter: blur(14px); }
     .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-    .brand-mark { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; border-radius: 13px; background: var(--accent); color: white; font-size: 22px; }
+    .brand-mark { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; overflow: hidden; border-radius: 13px; background: var(--accent); color: white; font-size: 22px; }
+    .brand-mark img { width: 100%; height: 100%; object-fit: cover; }
     .brand-copy { min-width: 0; }
     .brand-name { overflow: hidden; font-size: 15px; font-weight: 800; letter-spacing: .04em; text-overflow: ellipsis; white-space: nowrap; }
     .brand-caption { color: var(--muted); font-size: 12px; }
@@ -175,9 +176,9 @@
   </div>
   <header class="topbar">
     <div class="brand">
-      <div class="brand-mark" aria-hidden="true">✳</div>
+      <div class="brand-mark" aria-hidden="true"><img id="brand-logo" alt="" hidden><span id="brand-icon">🚚</span></div>
       <div class="brand-copy">
-        <div class="brand-name" id="business-name">FOOD KIOSK</div>
+        <div class="brand-name" id="business-name">FOOD TRUCK</div>
         <div class="brand-caption">Freshly made · Made to order</div>
       </div>
     </div>
@@ -187,11 +188,11 @@
   <main>
     <section class="intro">
       <div>
-        <p class="eyebrow">A good choice, made easy</p>
-        <h1>Order something<br>you’ll love.</h1>
-        <p class="intro-copy">Choose your favourites and place your order. We’ll prepare it fresh while you pay at the counter.</p>
+        <p class="eyebrow" id="hero-eyebrow">A good choice, made easy</p>
+        <h1><span id="hero-heading-top">Order something</span><br><span id="hero-heading-bottom">you’ll love.</span></h1>
+        <p class="intro-copy" id="hero-message">Choose your favourites and place your order. We’ll prepare it fresh while you pay at the counter.</p>
       </div>
-      <div class="service-note"><span aria-hidden="true">↗</span> Pay at the counter · Cash or PhonePe QR</div>
+      <div class="service-note"><span aria-hidden="true">↗</span><span id="counter-message">Pay at the counter · Cash or PhonePe QR</span></div>
     </section>
 
     <div id="message" class="message" role="alert" hidden></div>
@@ -214,14 +215,14 @@
         <section class="order-card" id="your-order" aria-labelledby="order-heading">
           <div class="order-heading">
             <h2 id="order-heading">Your order <span id="item-count" style="color:#92958c;font-size:13px;font-weight:600"></span></h2>
-            <p>Review everything before sending it to the kitchen.</p>
+            <p id="cart-message">Review everything before sending it to the kitchen.</p>
           </div>
           <div class="cart-lines" id="cart"></div>
           <div class="order-summary">
             <div class="summary-row"><span>Items</span><span id="subtotal">₹0</span></div>
             <div class="summary-total"><span>Total due</span><span id="total">₹0</span></div>
             <button class="submit-button" id="place-order" type="button" disabled>Confirm order</button>
-            <p class="counter-note">Confirm your order to print the kitchen bill and token slip. Payment is collected at the counter.</p>
+            <p class="counter-note" id="checkout-message">Confirm your order to print the kitchen bill and token slip. Payment is collected at the counter.</p>
           </div>
         </section>
         <section class="promo-card" aria-label="Food promotion">
@@ -244,13 +245,13 @@
     <section class="confirmation" role="dialog" aria-modal="true" aria-labelledby="confirm-heading">
       <div class="confirm-icon" aria-hidden="true">✓</div>
       <h2 id="confirm-heading">Your order is confirmed</h2>
-      <p class="confirmation-copy">Two slips print automatically. Give the order summary to the kitchen and keep your token for collection.</p>
+      <p class="confirmation-copy" id="confirmation-copy">Two slips print automatically. Give the order summary to the kitchen and keep your token for collection.</p>
       <div class="token-ticket">
         <div class="token-label" id="token-heading">Your collection token</div>
         <div class="token-value" id="token-number">—</div>
         <div class="due-value">Amount due <span id="confirmation-total">₹0</span></div>
       </div>
-      <div class="collect-bill">COLLECT THE ORDER SUMMARY BILL</div>
+      <div class="collect-bill" id="bill-collection-message">COLLECT THE ORDER SUMMARY BILL</div>
       <div class="token-countdown" id="token-countdown" aria-live="polite">TOKEN SLIP PRINTS IN 3 SECONDS</div>
       <p class="print-message" id="print-message" aria-live="polite"></p>
       <div class="confirm-actions">
@@ -280,7 +281,18 @@
           if (!Array.isArray(data.menu) || data.menu.length === 0) throw new Error('There are no menu items available right now.');
           state.menu = data.menu;
           const business = data.business || {};
-          if (business.name) $('#business-name').textContent = business.name;
+          $('#business-name').textContent = business.name || 'FOOD TRUCK';
+          applyBusinessBranding(business);
+          $('#hero-eyebrow').textContent = business.kiosk_hero_eyebrow || 'A good choice, made easy';
+          $('#hero-heading-top').textContent = business.kiosk_hero_heading_top || 'Order something';
+          $('#hero-heading-bottom').textContent = business.kiosk_hero_heading_bottom || 'you’ll love.';
+          $('#hero-message').textContent = business.kiosk_hero_message || 'Choose your favourites and place your order. We’ll prepare it fresh while you pay at the counter.';
+          $('#counter-message').textContent = business.kiosk_counter_message || 'Pay at the counter · Cash or PhonePe QR';
+          $('#cart-message').textContent = business.kiosk_cart_message || 'Review everything before sending it to the kitchen.';
+          $('#checkout-message').textContent = business.kiosk_checkout_message || 'Confirm your order to print the kitchen bill and token slip. Payment is collected at the counter.';
+          $('#confirm-heading').textContent = business.kiosk_confirmation_heading || 'Your order is confirmed';
+          $('#confirmation-copy').textContent = business.kiosk_confirmation_message || 'Two slips print automatically. Give the order summary to the kitchen and keep your token for collection.';
+          $('#bill-collection-message').textContent = business.receipt_bill_instruction || 'COLLECT THE ORDER SUMMARY BILL';
           $('#token-heading').textContent = business.receipt_token_heading || 'Your collection token';
           state.backgroundVideo = business.kiosk_background_video || state.backgroundVideo;
           state.tokenPrintDelay = Math.min(3, Math.max(2, Number(business.token_print_delay_seconds) || 3));
@@ -310,6 +322,25 @@
         const opacity = Math.min(24, Math.max(3, Number(settings.kiosk_background_opacity) || 12));
         document.documentElement.style.setProperty('--ambience-opacity', `${opacity / 100}`);
         document.querySelector('meta[name="theme-color"]').content = theme === 'light' ? '#f7f7f4' : '#191b1f';
+      }
+
+      function applyBusinessBranding(business) {
+        const logo = $('#brand-logo');
+        const fallback = $('#brand-icon');
+        const url = business.business_logo || '';
+        logo.onerror = () => {
+          logo.hidden = true;
+          fallback.hidden = false;
+        };
+        if (!url) {
+          logo.removeAttribute('src');
+          logo.hidden = true;
+          fallback.hidden = false;
+          return;
+        }
+        logo.src = url;
+        logo.hidden = false;
+        fallback.hidden = true;
       }
 
       function renderFilters() {
@@ -559,10 +590,12 @@
         renderFilters();
         renderMenu();
       });
-      $('#menu').addEventListener('click', (event) => {
+      function handleAddClick(event) {
         const button = event.target.closest('[data-add]');
         if (button) addItem(Number(button.dataset.add));
-      });
+      }
+      $('#menu').addEventListener('click', handleAddClick);
+      $('#featured-grid').addEventListener('click', handleAddClick);
       $('#cart').addEventListener('click', (event) => {
         const button = event.target.closest('[data-change]');
         if (button) changeQuantity(Number(button.dataset.change), Number(button.dataset.delta));

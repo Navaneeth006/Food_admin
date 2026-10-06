@@ -13,7 +13,7 @@ const HOST = '0.0.0.0';
 app.use(express.json());
 app.use('/api/admin', (req, res, next) => {
   if (req.get('origin') !== 'https://localhost') {
-    res.status(403).json({ error: 'Admin controls are available in the Food Kiosk app only.' });
+    res.status(403).json({ error: 'Admin controls are available in the Food Truck app only.' });
     return;
   }
   next();
@@ -133,7 +133,7 @@ app.get('/api/admin/stats', (req, res) => {
 });
 
 app.get(['/admin.html', '/index.html'], (_req, res) => {
-  res.status(404).send('Admin controls are available in the Food Kiosk app only.');
+  res.status(404).send('Admin controls are available in the Food Truck app only.');
 });
 
 app.use(express.static(publicDir, { index: false }));

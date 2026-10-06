@@ -1,6 +1,6 @@
 {
   "appId": "com.appkiosk.phone",
-  "appName": "App Kiosk",
+  "appName": "Food Truck",
   "webDir": "public",
   "server": {
     "androidScheme": "https"

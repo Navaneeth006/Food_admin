@@ -13,6 +13,8 @@ import androidx.core.content.ContextCompat;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.BufferedOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.util.UUID;
 
@@ -64,18 +66,48 @@ public final class BluetoothPrinter {
         if (adapter == null || !adapter.isEnabled()) throw new IllegalStateException("Turn Bluetooth on and pair the printer.");
 
         BluetoothDevice device = adapter.getRemoteDevice(address);
-        try (BluetoothSocket socket = device.createRfcommSocketToServiceRecord(SERIAL_PORT_PROFILE)) {
-            adapter.cancelDiscovery();
-            socket.connect();
-            OutputStream output = socket.getOutputStream();
-            output.write(bytes);
-            output.flush();
+        adapter.cancelDiscovery();
+        try (BluetoothSocket socket = connect(device)) {
+            try (OutputStream output = new BufferedOutputStream(socket.getOutputStream())) {
+                output.write(bytes);
+                output.flush();
+            }
+        }
+    }
+
+    private static BluetoothSocket connect(BluetoothDevice device) throws IOException {
+        BluetoothSocket secureSocket = device.createRfcommSocketToServiceRecord(SERIAL_PORT_PROFILE);
+        try {
+            secureSocket.connect();
+            return secureSocket;
+        } catch (IOException secureFailure) {
+            try {
+                secureSocket.close();
+            } catch (IOException closeFailure) {
+                secureFailure.addSuppressed(closeFailure);
+            }
+            BluetoothSocket insecureSocket = device.createInsecureRfcommSocketToServiceRecord(SERIAL_PORT_PROFILE);
+            try {
+                insecureSocket.connect();
+                return insecureSocket;
+            } catch (IOException insecureFailure) {
+                try {
+                    insecureSocket.close();
+                } catch (IOException closeFailure) {
+                    insecureFailure.addSuppressed(closeFailure);
+                }
+                insecureFailure.addSuppressed(secureFailure);
+                throw new IOException(
+                        "Could not connect to the selected printer. Confirm it is powered on, paired, and supports Classic Bluetooth SPP.",
+                        insecureFailure
+                );
+            }
         }
     }
 
     public static byte[] testReceipt() {
         return new byte[]{0x1b, 0x40, 0x1b, 0x61, 0x01,
-                0x1b, 0x45, 0x01, 'F', 'O', 'O', 'D', ' ', 'K', 'I', 'O', 'S', 'K',
+                0x1b, 0x45, 0x01, 'F', 'O', 'O', 'D', ' ', 'T', 'R', 'U', 'C', 'K',
                 0x1b, 0x45, 0x00, 0x0a,
                 'B', 'l', 'u', 'e', 't', 'o', 'o', 't', 'h', ' ', 'p', 'r', 'i', 'n', 't', ' ', 't', 'e', 's', 't', 0x0a,
                 0x0a, 0x0a, 0x1d, 0x56, 0x42, 0x00};

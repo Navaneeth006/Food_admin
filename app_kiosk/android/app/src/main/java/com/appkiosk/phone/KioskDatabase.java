@@ -16,9 +16,10 @@ import org.json.JSONObject;
 
 public class KioskDatabase extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "food_kiosk.db";
-    private static final int DATABASE_VERSION = 3;
+    private static final int DATABASE_VERSION = 4;
     private static final Pattern COLOR_PATTERN = Pattern.compile("^#[0-9a-fA-F]{6}$");
     private static final Pattern LOCAL_VIDEO_PATTERN = Pattern.compile("^/media/[A-Za-z0-9._-]{1,120}$");
+    private static final Pattern LOCAL_IMAGE_PATTERN = Pattern.compile("^/media/[A-Za-z0-9._-]{1,120}\\.(png|jpe?g|webp)$");
     private static KioskDatabase instance;
 
     public static synchronized KioskDatabase get(Context context) {
@@ -57,6 +58,10 @@ public class KioskDatabase extends SQLiteOpenHelper {
                     "SELECT id FROM products WHERE available=1 AND sort_order<2 AND category_id IN (" +
                     "SELECT id FROM categories WHERE available=1 ORDER BY sort_order,id LIMIT 2))");
             seedCustomizationSettings(database);
+        }
+        if (oldVersion < 4) {
+            seedBrandSettings(database);
+            database.execSQL("UPDATE settings SET value='FOOD TRUCK' WHERE key='business_name' AND value='FOOD KIOSK'");
         }
     }
 
@@ -165,13 +170,34 @@ public class KioskDatabase extends SQLiteOpenHelper {
         String tokenHeading = appearance.optString("tokenHeading", "CUSTOMER TOKEN").trim();
         String tokenInstruction = appearance.optString("tokenInstruction", "Keep this token for collection.").trim();
         String promoMedia = validatePromoMediaUrl(appearance.optString("promoMedia", ""));
+        String businessLogo = validateBusinessLogoUrl(appearance.optString("businessLogo", ""));
+        String heroEyebrow = appearance.optString("heroEyebrow", "A good choice, made easy").trim();
+        String heroHeadingTop = appearance.optString("heroHeadingTop", "Order something").trim();
+        String heroHeadingBottom = appearance.optString("heroHeadingBottom", "you’ll love.").trim();
+        String heroMessage = appearance.optString("heroMessage", "Choose your favourites and place your order. We’ll prepare it fresh while you pay at the counter.").trim();
+        String counterMessage = appearance.optString("counterMessage", "Pay at the counter · Cash or PhonePe QR").trim();
+        String cartMessage = appearance.optString("cartMessage", "Review everything before sending it to the kitchen.").trim();
+        String checkoutMessage = appearance.optString("checkoutMessage", "Confirm your order to print the kitchen bill and token slip. Payment is collected at the counter.").trim();
+        String confirmationHeading = appearance.optString("confirmationHeading", "Your order is confirmed").trim();
+        String confirmationMessage = appearance.optString("confirmationMessage", "Two slips print automatically. Give the order summary to the kitchen and keep your token for collection.").trim();
+        String billInstruction = appearance.optString("billInstruction", "COLLECT THE ORDER SUMMARY BILL").trim();
         int tokenPrintDelay = appearance.optInt("tokenPrintDelay", 3);
         int receiptFontScale = appearance.optInt("receiptFontScale", 1);
         if (businessName.isEmpty() || businessName.length() > 80 ||
                 featuredLabel.isEmpty() || featuredLabel.length() > 40 ||
                 billHeading.isEmpty() || billHeading.length() > 50 ||
                 tokenHeading.isEmpty() || tokenHeading.length() > 50 ||
-                tokenInstruction.isEmpty() || tokenInstruction.length() > 80) {
+                tokenInstruction.isEmpty() || tokenInstruction.length() > 80 ||
+                heroEyebrow.isEmpty() || heroEyebrow.length() > 60 ||
+                heroHeadingTop.isEmpty() || heroHeadingTop.length() > 50 ||
+                heroHeadingBottom.isEmpty() || heroHeadingBottom.length() > 50 ||
+                heroMessage.isEmpty() || heroMessage.length() > 200 ||
+                counterMessage.isEmpty() || counterMessage.length() > 100 ||
+                cartMessage.isEmpty() || cartMessage.length() > 120 ||
+                checkoutMessage.isEmpty() || checkoutMessage.length() > 160 ||
+                confirmationHeading.isEmpty() || confirmationHeading.length() > 60 ||
+                confirmationMessage.isEmpty() || confirmationMessage.length() > 200 ||
+                billInstruction.isEmpty() || billInstruction.length() > 80) {
             throw new IllegalArgumentException("Business name, headings, and token message must be filled in and within the length limits.");
         }
         if (tokenPrintDelay < 2 || tokenPrintDelay > 3) {
@@ -191,8 +217,19 @@ public class KioskDatabase extends SQLiteOpenHelper {
             putSetting(database, "kiosk_promo_media", promoMedia);
             putSetting(database, "kiosk_background_opacity", String.valueOf(backgroundOpacity));
             putSetting(database, "business_name", businessName);
+            putSetting(database, "business_logo", businessLogo);
             putSetting(database, "kiosk_featured_label", featuredLabel);
+            putSetting(database, "kiosk_hero_eyebrow", heroEyebrow);
+            putSetting(database, "kiosk_hero_heading_top", heroHeadingTop);
+            putSetting(database, "kiosk_hero_heading_bottom", heroHeadingBottom);
+            putSetting(database, "kiosk_hero_message", heroMessage);
+            putSetting(database, "kiosk_counter_message", counterMessage);
+            putSetting(database, "kiosk_cart_message", cartMessage);
+            putSetting(database, "kiosk_checkout_message", checkoutMessage);
+            putSetting(database, "kiosk_confirmation_heading", confirmationHeading);
+            putSetting(database, "kiosk_confirmation_message", confirmationMessage);
             putSetting(database, "receipt_bill_heading", billHeading);
+            putSetting(database, "receipt_bill_instruction", billInstruction);
             putSetting(database, "receipt_token_heading", tokenHeading);
             putSetting(database, "receipt_token_instruction", tokenInstruction);
             putSetting(database, "token_print_delay_seconds", String.valueOf(tokenPrintDelay));
@@ -300,6 +337,24 @@ public class KioskDatabase extends SQLiteOpenHelper {
         throw new IllegalArgumentException("Use an uploaded image/video or direct HTTPS MP4, WebM, JPG, PNG, or WebP URL.");
     }
 
+    private String validateBusinessLogoUrl(String value) {
+        String url = value.trim();
+        if (url.isEmpty()) return "";
+        if (url.length() > 2048) throw new IllegalArgumentException("Logo URL is too long.");
+        if (LOCAL_IMAGE_PATTERN.matcher(url).matches()) return url;
+        try {
+            URI parsed = URI.create(url);
+            String path = parsed.getPath();
+            if ("https".equalsIgnoreCase(parsed.getScheme()) && parsed.getHost() != null &&
+                    path != null && path.toLowerCase(Locale.ROOT).matches(".*\\.(png|jpe?g|webp)$")) {
+                return url;
+            }
+        } catch (IllegalArgumentException ignored) {
+            throw new IllegalArgumentException("Use an uploaded PNG, JPG, or WebP image or a direct HTTPS image URL.");
+        }
+        throw new IllegalArgumentException("Use an uploaded PNG, JPG, or WebP image or a direct HTTPS image URL.");
+    }
+
     private void seed(SQLiteDatabase database) {
         String[][] categories = {
                 {"FRIES", "🍟"}, {"CHICKEN", "🍗"}, {"ROLLS", "🌯"}, {"EXTRAS", "🧀"}
@@ -365,6 +420,21 @@ public class KioskDatabase extends SQLiteOpenHelper {
         putSettingIfMissing(database, "receipt_token_instruction", "Keep this token for collection.");
         putSettingIfMissing(database, "token_print_delay_seconds", "3");
         putSettingIfMissing(database, "receipt_font_scale", "1");
+        seedBrandSettings(database);
+    }
+
+    private void seedBrandSettings(SQLiteDatabase database) {
+        putSettingIfMissing(database, "business_logo", "");
+        putSettingIfMissing(database, "kiosk_hero_eyebrow", "A good choice, made easy");
+        putSettingIfMissing(database, "kiosk_hero_heading_top", "Order something");
+        putSettingIfMissing(database, "kiosk_hero_heading_bottom", "you’ll love.");
+        putSettingIfMissing(database, "kiosk_hero_message", "Choose your favourites and place your order. We’ll prepare it fresh while you pay at the counter.");
+        putSettingIfMissing(database, "kiosk_counter_message", "Pay at the counter · Cash or PhonePe QR");
+        putSettingIfMissing(database, "kiosk_cart_message", "Review everything before sending it to the kitchen.");
+        putSettingIfMissing(database, "kiosk_checkout_message", "Confirm your order to print the kitchen bill and token slip. Payment is collected at the counter.");
+        putSettingIfMissing(database, "kiosk_confirmation_heading", "Your order is confirmed");
+        putSettingIfMissing(database, "kiosk_confirmation_message", "Two slips print automatically. Give the order summary to the kitchen and keep your token for collection.");
+        putSettingIfMissing(database, "receipt_bill_instruction", "COLLECT THE ORDER SUMMARY BILL");
     }
 
     private void putSettingIfMissing(SQLiteDatabase database, String key, String value) {

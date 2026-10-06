@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server/app.js",
     "dev": "node --watch server/app.js",
-    "android:init": "npx cap init \"App Kiosk\" com.appkiosk.phone --web-dir public",
+    "android:init": "npx cap init \"Food Truck\" com.appkiosk.phone --web-dir public",
     "android:sync": "npx cap sync android",
     "android:open": "npx cap open android",
     "android:build": "npx cap build android"
